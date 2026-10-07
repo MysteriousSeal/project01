@@ -6,7 +6,8 @@ import { GameEvent } from './src/game/engine';
 import GameView, { RunResult } from './src/game/GameView';
 import { applyRun, claimDaily, ensureMissions, RunReport } from './src/game/progress';
 import { defaultSave, loadSave, Save, writeSave } from './src/game/save';
-import { skinById } from './src/game/skins';
+import { skinById, trailById } from './src/game/skins';
+import { modsFrom } from './src/game/upgrades';
 import { Home } from './src/ui/Home';
 import { GameOver } from './src/ui/Screens';
 import { Shop } from './src/ui/Shop';
@@ -79,7 +80,7 @@ export default function App() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      {screen !== 'home' && <GameView key={run} W={W} H={H} ballColor={skin.ball} trailColor={skin.trail} showHint={save.games < 3} bestIdx={save.bestPlanet} onEvent={buzz} onEnd={onEnd} />}
+      {screen !== 'home' && <GameView key={run} W={W} H={H} ballColor={skin.ball} trailColor={skin.trail} trailStyle={trailById(save.trail).id} mods={modsFrom(save.upgrades)} showHint={save.games < 3} bestIdx={save.bestPlanet} onEvent={buzz} onEnd={onEnd} />}
       {screen === 'home' && <Home save={save} onPlay={play} onShop={openShop} onClaim={() => { commit(claimDaily(save)); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />}
       {screen === 'over' && result && report && <GameOver result={result} report={report} onRetry={play} onHome={() => setScreen('home')} onShop={openShop} />}
       {shop && <Shop save={save} onChange={commit} onClose={() => setShop(false)} onBuy={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})} />}

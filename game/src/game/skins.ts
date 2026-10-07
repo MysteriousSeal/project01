@@ -19,3 +19,17 @@ export const skinById = (id: string) => SKINS.find((s) => s.id === id) ?? SKINS[
 export function nextSkin(save: Save) {
   return SKINS.filter((s) => !save.owned.includes(s.id)).sort((a, b) => a.price - b.price)[0];
 }
+
+export type TrailStyle = 'classic' | 'sparkle' | 'comet' | 'rainbow' | 'pixel' | 'ghost';
+export type Trail = { id: TrailStyle; name: string; price: number };
+
+export const TRAILS: Trail[] = [
+  { id: 'classic', name: 'Classic', price: 0 },
+  { id: 'pixel', name: 'Pixel', price: 120 },
+  { id: 'ghost', name: 'Ghost', price: 220 },
+  { id: 'sparkle', name: 'Sparkle', price: 350 },
+  { id: 'comet', name: 'Comet', price: 550 },
+  { id: 'rainbow', name: 'Rainbow', price: 850 },
+];
+
+export const trailById = (id: string) => TRAILS.find((t) => t.id === id) ?? TRAILS[0];

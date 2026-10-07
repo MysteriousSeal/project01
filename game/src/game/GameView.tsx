@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { createState, FEVER_TIME, GameEvent, MAGNET_TIME, State, step, tap, zoneOf } from './engine';
+import { TrailDot, trailLength } from '../ui/TrailDot';
+import { createState, GameEvent, State, step, tap, zoneOf } from './engine';
+import { TrailStyle } from './skins';
+import { Mods } from './upgrades';
 
 export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number };
 
@@ -9,6 +12,8 @@ type Props = {
   H: number;
   ballColor: string;
   trailColor: string;
+  trailStyle?: TrailStyle;
+  mods?: Mods;
   showHint?: boolean;
   bestIdx?: number;
   onEvent?: (e: GameEvent) => void;
@@ -17,8 +22,8 @@ type Props = {
 
 const STARS = Array.from({ length: 60 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 2 + 1, d: Math.random() * 0.4 + 0.1 }));
 
-export default function GameView({ W, H, ballColor, trailColor, showHint, bestIdx = 0, onEvent, onEnd }: Props) {
-  const s = useRef<State>(createState(W, H, bestIdx)).current;
+export default function GameView({ W, H, ballColor, trailColor, trailStyle = 'classic', mods, showHint, bestIdx = 0, onEvent, onEnd }: Props) {
+  const s = useRef<State>(createState(W, H, bestIdx, mods)).current;
   const [, setFrame] = useState(0);
   const ended = useRef(false);
   const cb = useRef({ onEvent, onEnd });
@@ -106,11 +111,9 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, bestId
         )}
 
         {!s.dead &&
-          s.trail.map((t, i) => {
-            const k = (i + 1) / s.trail.length;
-            const r = 3 + k * 6;
-            return <View key={`t${i}`} style={[styles.circle, { left: t.x - r, top: t.y - cy - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: trail, opacity: k * (fever ? 0.8 : 0.5) }]} />;
-          })}
+          s.trail.slice(-trailLength(trailStyle)).map((t, i, arr) => (
+            <TrailDot key={`t${i}`} style={trailStyle} k={(i + 1) / arr.length} i={i} x={t.x} y={t.y - cy} color={trail} t={s.t} scale={0.8} />
+          ))}
 
         {!s.dead && !s.flying &&
           [1, 2, 3, 4].map((i) => {
@@ -141,8 +144,8 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, bestId
         <Text style={styles.score}>{s.score}</Text>
         <Text style={styles.coins}>● {s.coinsRun}</Text>
         {s.combo > 1 && <Text style={styles.combo}>COMBO x{s.combo}{!fever && s.combo % 5 === 4 ? '  · next = FEVER' : ''}</Text>}
-        {fever && <Timer label="FEVER  ×2 ●" k={s.fever / FEVER_TIME} color="#ff70a6" />}
-        {s.magnet > 0 && <Timer label="MAGNET" k={s.magnet / MAGNET_TIME} color="#ff70a6" />}
+        {fever && <Timer label="FEVER  ×2 ●" k={s.fever / s.mods.feverTime} color="#ff70a6" />}
+        {s.magnet > 0 && <Timer label="MAGNET" k={s.magnet / s.mods.magnetTime} color="#ff70a6" />}
         {s.shield && <Text style={[styles.combo, { color: '#4cc9f0' }]}>SHIELD ON</Text>}
       </View>
       {showHint && s.score === 0 && !s.dead && (

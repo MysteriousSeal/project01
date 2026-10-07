@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { dailyStatus, levelInfo, missionLabel } from '../game/progress';
 import { Save } from '../game/save';
-import { nextSkin, skinById } from '../game/skins';
+import { nextSkin, skinById, trailById, TrailStyle } from '../game/skins';
+import { TrailDot, trailLength } from './TrailDot';
 import { TopBar } from './Screens';
 import { C, F, fmt } from './theme';
 
@@ -37,13 +38,15 @@ function useLoop(duration: number, enabled: boolean, pingPong = false) {
   return v;
 }
 
-export function OrbitHero({ size, planetColor, ball, trail, still }: { size: number; planetColor: string; ball: string; trail: string; still: boolean }) {
+export function OrbitHero({ size, planetColor, ball, trail, still, trailStyle = 'classic' }: { size: number; planetColor: string; ball: string; trail: string; still: boolean; trailStyle?: TrailStyle }) {
   const rot = useLoop(2800, !still);
   const spin = rot.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const R = size / 2 - 14;
   const pr = size * 0.24;
   const c = size / 2;
-  const dots = [1, 2, 3, 4, 5, 6];
+  const n = trailLength(trailStyle);
+  const dots = Array.from({ length: n }, (_, j) => j);
+  const scale = size / 230;
   return (
     <View style={{ width: size, height: size }} accessible={false}>
       <View style={[styles.abs, { left: 14, top: 14, width: R * 2, height: R * 2, borderRadius: R, borderWidth: 1.5, borderColor: C.line }]} />
@@ -53,10 +56,9 @@ export function OrbitHero({ size, planetColor, ball, trail, still }: { size: num
         <View style={[styles.abs, { left: pr * 0.55, top: pr * 1.35, width: pr * 0.22, height: pr * 0.22, borderRadius: pr, backgroundColor: '#00000026' }]} />
       </View>
       <Animated.View style={[styles.abs, { left: 0, top: 0, width: size, height: size, transform: [{ rotate: spin }] }]}>
-        {dots.map((k) => {
-          const a = -Math.PI / 2 - k * 0.16;
-          const r = 9 - k * 1.1;
-          return <View key={k} style={[styles.abs, { left: c + Math.cos(a) * R - r, top: c + Math.sin(a) * R - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: trail, opacity: 0.6 - k * 0.09 }]} />;
+        {dots.map((j) => {
+          const a = -Math.PI / 2 - (j + 1) * (1.4 / n);
+          return <TrailDot key={j} style={trailStyle} k={1 - j / n} i={n - j} x={c + Math.cos(a) * R} y={c + Math.sin(a) * R} color={trail} t={0} scale={Math.max(0.6, scale)} />;
         })}
         <View style={[styles.abs, { left: c - 11, top: c - R - 11, width: 22, height: 22, borderRadius: 11, backgroundColor: ball, shadowColor: ball, shadowOpacity: 1, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, borderWidth: ball === '#111111' ? 2 : 0, borderColor: '#fff' }]} />
       </Animated.View>
@@ -91,7 +93,7 @@ export function Home({ save, onPlay, onShop, onClaim }: { save: Save; onPlay: ()
         <Text style={[styles.title, compact && { fontSize: 50 }]}>ORBIT</Text>
         <Text style={styles.hop}>hop</Text>
         <View style={{ marginTop: compact ? 4 : 12 }}>
-          <OrbitHero size={hero} planetColor={`hsl(${(200 + lvl * 37) % 360},70%,60%)`} ball={skin.ball} trail={skin.trail} still={still} />
+          <OrbitHero size={hero} planetColor={`hsl(${(200 + lvl * 37) % 360},70%,60%)`} ball={skin.ball} trail={skin.trail} still={still} trailStyle={trailById(save.trail).id} />
         </View>
         <View style={styles.readout}>
           <Readout label="BEST" value={fmt(save.best)} />

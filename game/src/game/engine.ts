@@ -1,3 +1,5 @@
+import { DEFAULT_MODS, type Mods } from './upgrades';
+
 export type Planet = {
   idx: number;
   x: number;
@@ -65,15 +67,15 @@ export type State = {
   shield: boolean;
   bestIdx: number;
   zone: number;
+  mods: Mods;
 };
 
-export const FEVER_TIME = 6;
-export const MAGNET_TIME = 8;
+
 
 const SPEED = 780;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
-function makePlanet(idx: number, prev: Planet | null, W: number): Planet {
+function makePlanet(idx: number, prev: Planet | null, W: number, fuseBonus = 0): Planet {
   const r = idx === 0 ? 38 : rand(24, 38);
   const orbit = r + 28;
   const margin = orbit + 14;
@@ -82,7 +84,7 @@ function makePlanet(idx: number, prev: Planet | null, W: number): Planet {
   if (prev && Math.abs(x - prev.x) < 50) x = prev.x + (x < W / 2 ? 90 : -90);
   const speedUp = Math.min(idx * 0.04, 1.4);
   const spin = (Math.random() < 0.5 ? -1 : 1) * (rand(1.7, 2.3) + speedUp);
-  const fuseMax = idx === 0 ? 6 : Math.max(1.8, 4.5 - idx * 0.07);
+  const fuseMax = idx === 0 ? 6 : Math.max(1.8, 4.5 - idx * 0.07) + fuseBonus;
   const moveAmp = idx > 12 && Math.random() < Math.min(0.15 + idx * 0.01, 0.5) ? rand(30, Math.min(W / 2 - margin, 90)) : 0;
   return {
     idx, x, baseX: x, y, r, orbit, spin, fuse: fuseMax, fuseMax,
@@ -90,7 +92,7 @@ function makePlanet(idx: number, prev: Planet | null, W: number): Planet {
   };
 }
 
-export function createState(W: number, H: number, bestIdx = 0): State {
+export function createState(W: number, H: number, bestIdx = 0, mods: Mods = DEFAULT_MODS): State {
   const first = makePlanet(0, null, W);
   const s: State = {
     W, H, planets: [first], coins: [], particles: [], popups: [], trail: [],
@@ -98,7 +100,7 @@ export function createState(W: number, H: number, bestIdx = 0): State {
     flying: false, flyT: 0, camY: first.y - H * 0.65,
     score: 0, coinsRun: 0, perfects: 0, combo: 0, bestCombo: 0,
     dead: false, deathReason: null, t: 0, shake: 0, events: [],
-    powerups: [], fever: 0, magnet: 0, shield: false, bestIdx, zone: 0,
+    powerups: [], fever: 0, magnet: 0, shield: mods.startShield, bestIdx, zone: 0, mods,
   };
   ensurePlanets(s);
   return s;
@@ -107,14 +109,14 @@ export function createState(W: number, H: number, bestIdx = 0): State {
 function ensurePlanets(s: State) {
   let last = s.planets[s.planets.length - 1];
   while (last.y > s.camY - s.H * 0.6 || last.idx < s.cur + 4) {
-    const p = makePlanet(last.idx + 1, last, s.W);
+    const p = makePlanet(last.idx + 1, last, s.W, s.mods.fuseBonus);
     const dx = last.x - p.x;
     const dy = last.y - p.y;
     const d = Math.hypot(dx, dy);
     const off = p.orbit + 34;
     const px = p.x + (dx / d) * off;
     const py = p.y + (dy / d) * off;
-    if (p.idx > 4 && Math.random() < 0.1) s.powerups.push({ x: px, y: py, kind: Math.random() < 0.5 ? 'shield' : 'magnet', taken: false });
+    if (p.idx > 4 && Math.random() < s.mods.powerChance) s.powerups.push({ x: px, y: py, kind: Math.random() < 0.5 ? 'shield' : 'magnet', taken: false });
     else if (Math.random() < 0.65) s.coins.push({ x: px, y: py, taken: false });
     s.planets.push(p);
     last = p;
@@ -240,7 +242,7 @@ export function step(s: State, dt: number) {
           s.shake = 5;
           s.events.push('perfect');
           if (s.combo % 5 === 0) {
-            s.fever = FEVER_TIME;
+            s.fever = s.mods.feverTime;
             s.shake = 12;
             s.popups.push({ x: s.W / 2, y: s.camY + s.H * 0.42, text: 'FEVER!', life: 1.3, color: '#ff70a6' });
             burst(s, s.bx, s.by, '#ff70a6', 30, 340);
@@ -280,7 +282,7 @@ export function step(s: State, dt: number) {
   collectPickups(s, dt);
 
   s.trail.push({ x: s.bx, y: s.by });
-  if (s.trail.length > 12) s.trail.shift();
+  if (s.trail.length > 18) s.trail.shift();
 
   const target = planetOf(s, s.cur).y - s.H * 0.65;
   s.camY += (target - s.camY) * Math.min(1, dt * 4);
@@ -310,7 +312,7 @@ function collectPickups(s: State, dt: number) {
     if (u.taken || Math.hypot(u.x - s.bx, u.y - s.by) > 32) continue;
     u.taken = true;
     if (u.kind === 'shield') s.shield = true;
-    else s.magnet = MAGNET_TIME;
+    else s.magnet = s.mods.magnetTime;
     const color = u.kind === 'shield' ? '#4cc9f0' : '#ff70a6';
     s.popups.push({ x: u.x, y: u.y - 24, text: u.kind === 'shield' ? 'SHIELD' : 'MAGNET', life: 1, color });
     burst(s, u.x, u.y, color, 18, 240);
