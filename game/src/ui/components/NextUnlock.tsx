@@ -3,6 +3,7 @@ import { nextSkin } from '../../game/cosmetics';
 import { Save } from '../../game/save';
 import { C, fmt, RADIUS } from '../theme';
 import { Ball } from './Ball';
+import { Coin, Icon } from './Icon';
 import { ProgressBar } from './ProgressBar';
 
 export function NextUnlock({ save, onPress }: { save: Save; onPress: () => void }) {
@@ -13,10 +14,10 @@ export function NextUnlock({ save, onPress }: { save: Save; onPress: () => void 
     <Pressable onPress={onPress} style={[styles.row, ready && styles.ready]} accessibilityRole="button" accessibilityLabel={`Open shop. ${next.name}, ${next.price} coins`}>
       <Ball color={next.ball} size={18} outline={next.outline} />
       <View style={styles.body}>
-        <Text style={styles.txt}>{ready ? `${next.name} is ready to unlock` : `${next.name}: ● ${fmt(next.price - save.wallet)} to go`}</Text>
+        <Text style={styles.txt}>{ready ? `${next.name} is ready to unlock` : <>{next.name}: <Coin size={12} /> {fmt(next.price - save.wallet)} to go</>}</Text>
         <ProgressBar value={save.wallet / next.price} color={C.gold} height={4} />
       </View>
-      <Text style={styles.go}>Shop ›</Text>
+      <Text style={styles.go}>Shop <Icon name="chevron-right" size={11} color={C.sky} /></Text>
     </Pressable>
   );
 }

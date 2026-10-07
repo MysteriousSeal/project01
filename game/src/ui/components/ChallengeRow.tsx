@@ -3,6 +3,7 @@ import { attemptsLeft, CHALLENGE_ATTEMPTS, ChallengeSlot, medalsOf, nextMedal, t
 import { statUnit } from '../../game/challengeTypes';
 import { C, F, RADIUS } from '../theme';
 import { Button } from './Button';
+import { Icon } from './Icon';
 
 type Props = { slot: ChallengeSlot; onPlay?: () => void; highlight?: boolean };
 
@@ -17,7 +18,7 @@ export function ChallengeRow({ slot, onPlay, highlight }: Props) {
     <View style={[styles.card, highlight && styles.highlight]}>
       <View style={styles.top}>
         <View style={[styles.tile, done && styles.tileDone]}>
-          <Text style={[styles.glyph, done && { color: C.dim }]}>{t.glyph}</Text>
+          <Icon name={t.icon} size={20} color={done ? C.dim : C.gold} />
         </View>
         <View style={styles.body} accessible accessibilityLabel={`${t.name}. ${t.summary}`}>
           <Text style={styles.name}>{t.name}</Text>
@@ -58,7 +59,6 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   tile: { width: 44, height: 44, borderRadius: RADIUS.md, backgroundColor: '#ffd34d1f', borderWidth: 1.5, borderColor: C.gold, alignItems: 'center', justifyContent: 'center' },
   tileDone: { backgroundColor: '#ffffff0d', borderColor: C.line },
-  glyph: { color: C.gold, fontSize: 22 },
   body: { flex: 1 },
   name: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 16 },
   summary: { color: C.dim, fontSize: 12, lineHeight: 16, marginTop: 1 },

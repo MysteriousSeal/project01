@@ -4,6 +4,7 @@ import type { RunReport } from '../../game/progress';
 import { Button } from '../components/Button';
 import { slotOf } from '../../game/challenge';
 import { ChallengeRow } from '../components/ChallengeRow';
+import { Coin } from '../components/Icon';
 import { MissionsCard } from '../components/MissionsCard';
 import { NextUnlock } from '../components/NextUnlock';
 import { TopBar } from '../components/TopBar';
@@ -25,9 +26,9 @@ export function GameOverScreen({ result, report, onRetry, onHome, onShop }: Prop
         <View style={styles.badges}>
           {daily && <Text style={[styles.badge, { backgroundColor: C.sky }]}>DAILY CHALLENGE</Text>}
           {daily?.newMedals.map((m) => <Text key={m.name} style={[styles.badge, { backgroundColor: m.color }]}>{m.name.toUpperCase()}</Text>)}
-          {daily && daily.reward > 0 && <Text style={[styles.badge, { backgroundColor: C.gold }]}>● +{daily.reward}</Text>}
+          {daily && daily.reward > 0 && <Text style={[styles.badge, { backgroundColor: C.gold }]}><Coin color={C.space} size={13} /> +{daily.reward}</Text>}
           {report.newBest && <Text style={[styles.badge, { backgroundColor: C.gold }]}>NEW BEST!</Text>}
-          {leveled && <Text style={[styles.badge, { backgroundColor: C.sky }]}>LEVEL {report.levelAfter}  ● +{report.levelReward}</Text>}
+          {leveled && <Text style={[styles.badge, { backgroundColor: C.sky }]}>LEVEL {report.levelAfter}  <Coin color={C.space} size={13} /> +{report.levelReward}</Text>}
         </View>
         <View style={styles.scoreBox} accessible accessibilityLabel={`Score ${result.score}. Best ${save.best}.`}>
           <Text style={[styles.big, compact && styles.bigCompact]}>{result.score}</Text>

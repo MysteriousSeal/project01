@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from 'react';
+import { ReactNode, useEffect, useEffectEvent, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Skin, TrailStyle } from '../../game/cosmetics';
 import { nextMedal, statOf } from '../../game/challenge';
@@ -10,6 +10,7 @@ import { inGap } from '../../game/world';
 import { hsl } from '../../game/palette';
 import { DEFAULT_MODS, Mods } from '../../game/upgrades';
 import { Ball } from '../components/Ball';
+import { Coin, Icon } from '../components/Icon';
 import { ProgressBar } from '../components/ProgressBar';
 import { Starfield } from '../components/Starfield';
 import { TrailDot, trailLength } from '../components/TrailDot';
@@ -107,7 +108,7 @@ export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHi
         {g.powerups.map((u, i) =>
           u.taken ? null : (
             <View key={`pw${i}`} style={[styles.power, { left: u.x - 16, top: u.y - cy - 16, borderColor: POWER_COLOR[u.kind], transform: [{ scale: 1 + 0.12 * Math.sin(g.t * 6 + i) }] }]}>
-              <Text style={[styles.powerTxt, { color: POWER_COLOR[u.kind] }]}>{u.kind === 'shield' ? 'S' : 'M'}</Text>
+              <Icon name={u.kind === 'shield' ? 'shield-halved' : 'magnet'} size={15} color={POWER_COLOR[u.kind]} />
             </View>
           ),
         )}
@@ -125,7 +126,7 @@ export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHi
         ))}
 
         {g.popups.map((u, i) => (
-          <Text key={`u${i}`} style={[styles.popup, { left: u.x - 100, top: u.y - cy, color: u.color, opacity: Math.min(1, u.life * 2) }]}>{u.text}</Text>
+          <Text key={`u${i}`} style={[styles.popup, { left: u.x - 100, top: u.y - cy, color: u.color, opacity: Math.min(1, u.life * 2) }]}>{u.text}{u.coins && <> <Coin size={16} /></>}</Text>
         ))}
       </View>
 
@@ -189,11 +190,11 @@ function Hud({ g, fever, challenge }: { g: State; fever: boolean; challenge?: Ch
   const ghost = ghostActive(g) && !g.dead ? ghostLabel(g) : null;
   return (
     <View style={styles.hud} pointerEvents="none">
-      {challenge && <Text style={styles.daily}>{challenge.glyph} {challenge.name.toUpperCase()} · {next ? `${next.name} at ${next.score} ${statUnit(challenge)}` : 'GOLD!'}</Text>}
+      {challenge && <Text style={styles.daily}><Icon name={challenge.icon} size={12} color={C.gold} /> {challenge.name.toUpperCase()} · {next ? `${next.name} at ${next.score} ${statUnit(challenge)}` : 'GOLD!'}</Text>}
       <Text style={styles.score}>{g.score}</Text>
-      <Text style={styles.coins}>● {g.coinsRun}</Text>
+      <Text style={styles.coins}><Coin size={16} /> {g.coinsRun}</Text>
       {g.combo > 1 && <Text style={styles.combo}>COMBO x{g.combo}{!fever && g.combo % g.rules.feverEvery === g.rules.feverEvery - 1 ? '  · next = FEVER' : ''}</Text>}
-      {fever && <Timer label="FEVER  ×2 ●" value={g.fever / (g.mods.feverTime + g.rules.feverBonus)} color={C.pink} />}
+      {fever && <Timer label={<>FEVER ×2 <Coin size={13} color={C.pink} /></>} value={g.fever / (g.mods.feverTime + g.rules.feverBonus)} color={C.pink} />}
       {g.magnet > 0 && <Timer label="MAGNET" value={g.magnet / g.mods.magnetTime} color={C.pink} />}
       {g.shield && <Text style={[styles.combo, { color: C.cyan }]}>SHIELD ON</Text>}
       {ghost && <Text style={[styles.status, { color: ghost.color }]}>{ghost.text}</Text>}
@@ -202,7 +203,7 @@ function Hud({ g, fever, challenge }: { g: State; fever: boolean; challenge?: Ch
   );
 }
 
-function Timer({ label, value, color }: { label: string; value: number; color: string }) {
+function Timer({ label, value, color }: { label: ReactNode; value: number; color: string }) {
   return (
     <View style={styles.timer}>
       <Text style={[styles.timerTxt, { color }]}>{label}</Text>
@@ -224,7 +225,6 @@ const styles = StyleSheet.create({
   bestLine: { position: 'absolute', left: 0, right: 0, height: 0, borderTopWidth: 2, borderColor: '#ffd34d88', borderStyle: 'dashed' },
   bestTxt: { position: 'absolute', right: 10, top: -22, color: C.gold, fontWeight: '900', fontSize: 13, letterSpacing: 2 },
   power: { position: 'absolute', width: 32, height: 32, borderRadius: 16, borderWidth: 3, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff15' },
-  powerTxt: { fontWeight: '900', fontSize: 15 },
   shield: { position: 'absolute', width: 40, height: 40, borderRadius: 20, borderWidth: 2.5, borderColor: C.cyan, backgroundColor: '#4cc9f022' },
   magnetRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: C.pink },
   timer: { alignItems: 'center', marginTop: 6, gap: 3 },

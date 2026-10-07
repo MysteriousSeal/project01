@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Cosmetic } from '../../../game/cosmetics';
 import { Button } from '../../components/Button';
+import { Coin } from '../../components/Icon';
 import { C, F, fmt, GAP, GUTTER, RADIUS } from '../../theme';
 
 type Props = {
@@ -43,7 +44,7 @@ export function CosmeticTab({ items, owned, equipped, wallet, renderIcon, render
             >
               {renderIcon(k.id)}
               <Text style={styles.name}>{k.name}</Text>
-              <Text style={[styles.tag, { color: e ? C.mint : o ? C.dim : C.gold }]}>{e ? 'Equipped' : o ? 'Owned' : `● ${fmt(k.price)}`}</Text>
+              <Text style={[styles.tag, { color: e ? C.mint : o ? C.dim : C.gold }]}>{e ? 'Equipped' : o ? 'Owned' : <><Coin size={11} /> {fmt(k.price)}</>}</Text>
             </Pressable>
           );
         })}
@@ -54,7 +55,7 @@ export function CosmeticTab({ items, owned, equipped, wallet, renderIcon, render
         <View style={styles.info}>
           <View>
             <Text style={styles.selName}>{sel.name}</Text>
-            <Text style={styles.selSub}>{has ? (on ? 'Currently equipped' : 'In your collection') : `● ${fmt(sel.price)}`}</Text>
+            <Text style={styles.selSub}>{has ? (on ? 'Currently equipped' : 'In your collection') : <><Coin size={12} /> {fmt(sel.price)}</>}</Text>
           </View>
           <ActionButton item={sel} has={has} on={on} wallet={wallet} onBuy={onBuy} onEquip={onEquip} />
         </View>
@@ -66,8 +67,8 @@ export function CosmeticTab({ items, owned, equipped, wallet, renderIcon, render
 function ActionButton({ item, has, on, wallet, onBuy, onEquip }: { item: Cosmetic; has: boolean; on: boolean; wallet: number; onBuy: (id: string) => void; onEquip: (id: string) => void }) {
   if (on) return <Button label="Equipped" variant="muted" labelColor={C.mint} />;
   if (has) return <Button label="Equip" variant="sky" onPress={() => onEquip(item.id)} />;
-  if (wallet < item.price) return <Button label={`Need ● ${fmt(item.price - wallet)} more`} variant="muted" />;
-  return <Button label={`Buy for ● ${fmt(item.price)}`} variant="gold" onPress={() => onBuy(item.id)} accessibilityLabel={`Buy ${item.name} for ${item.price} coins`} />;
+  if (wallet < item.price) return <Button label="Need" price={item.price - wallet} variant="muted" />;
+  return <Button label="Buy for" price={item.price} variant="gold" onPress={() => onBuy(item.id)} accessibilityLabel={`Buy ${item.name} for ${item.price} coins`} />;
 }
 
 const styles = StyleSheet.create({

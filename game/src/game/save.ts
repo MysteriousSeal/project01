@@ -21,7 +21,12 @@ export type Save = {
   streak: number;
   ghost: Track;
   challenges: DailyChallenges;
+  settings: Settings;
 };
+
+export type Settings = { ghost: boolean };
+
+export const defaultSettings = (): Settings => ({ ghost: false });
 
 export const defaultSave = (): Save => ({
   best: 0,
@@ -39,6 +44,7 @@ export const defaultSave = (): Save => ({
   streak: 0,
   ghost: [],
   challenges: emptyChallenges(),
+  settings: defaultSettings(),
 });
 
 type Raw = Record<string, unknown>;
@@ -115,5 +121,6 @@ export function normalizeSave(input: unknown): Save {
     streak: count(r.streak),
     ghost: parseTrack(r.ghost),
     challenges: challenges(r.challenges, r.challenge),
+    settings: { ghost: r.settings && typeof r.settings === 'object' ? (r.settings as Raw).ghost === true : false },
   };
 }

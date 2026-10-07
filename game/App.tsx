@@ -15,6 +15,7 @@ import { DailyScreen } from './src/ui/screens/DailyScreen';
 import { GameOverScreen } from './src/ui/screens/GameOverScreen';
 import { GameScreen } from './src/ui/screens/GameScreen';
 import { HomeScreen } from './src/ui/screens/HomeScreen';
+import { SettingsScreen } from './src/ui/screens/SettingsScreen';
 import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
 import { C } from './src/ui/theme';
 
@@ -106,6 +107,7 @@ export default function App() {
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
             {tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
             {tab === 'shop' && <ShopScreen save={save} onChange={setSave} />}
+            {tab === 'settings' && <SettingsScreen save={save} onChange={(settings) => setSave({ ...save, settings })} />}
           </View>
           <TabBar tab={tab} onChange={setTab} badges={{ daily: dailyBadge }} />
         </>
@@ -119,7 +121,7 @@ export default function App() {
           mods={daily ? DEFAULT_MODS : mods}
           showHint={save.games < TUTORIAL_GAMES}
           bestIdx={daily ? 0 : save.bestPlanet}
-          ghost={daily && activeSlot ? activeSlot.ghost : save.ghost}
+          ghost={!save.settings.ghost ? [] : daily && activeSlot ? activeSlot.ghost : save.ghost}
           seed={daily ? challengeSeed(save.challenges.day || dayKey(new Date()), active) : undefined}
           challenge={daily && activeSlot ? typeOf(activeSlot) : undefined}
           onEvent={hapticForEvent}

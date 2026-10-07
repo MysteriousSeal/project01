@@ -2,6 +2,7 @@ import { ChallengeOutcome, recordChallenge } from './challenge';
 import type { RunResult } from './engine';
 import { advanceMission, fillMissions, isDone, Mission } from './missions';
 import type { Rng } from './rng';
+import { trackBest } from './ghost';
 import type { Save } from './save';
 
 export const xpForLevel = (lvl: number) => 80 + lvl * 40;
@@ -60,9 +61,9 @@ export function applyRun(save: Save, r: RunResult, { mode = 'normal', challenge:
     return { ...report, save: next, newBest: false, challenge: recorded?.outcome };
   }
 
-  const record = r.planets > save.bestPlanet;
+  const betterGhost = r.planets > trackBest(save.ghost);
   const next = ensureMissions(
-    { ...base, best: Math.max(save.best, r.score), bestPlanet: Math.max(save.bestPlanet, r.planets), ghost: record ? r.landings : save.ghost },
+    { ...base, best: Math.max(save.best, r.score), bestPlanet: Math.max(save.bestPlanet, r.planets), ghost: betterGhost ? r.landings : save.ghost },
     rng,
   );
   return { ...report, save: next, newBest: r.score > save.best && r.score > 0 };

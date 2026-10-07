@@ -6,7 +6,7 @@ import { createState, isBossIndex, planetOf, RunResult, runResult, State, step, 
 import { parseTrack, Track, TRACK_END, trackBest } from '../src/game/ghost';
 import { applyRun } from '../src/game/progress';
 import { seededRng } from '../src/game/rng';
-import { normalizeSave } from '../src/game/save';
+import { defaultSave, normalizeSave } from '../src/game/save';
 import { DT, FROM_BELOW, H, hop, newGame, runFor, saveWith, W } from './helpers';
 
 const drain = (s: State) => {
@@ -285,6 +285,21 @@ describe('run modes', () => {
     expect(rep.save.ghost).toEqual(landings);
     const worse = applyRun(rep.save, run({ score: 1, planets: 1, landings: [[1, 1]] }), { rng: seededRng(1) });
     expect(worse.save.ghost).toEqual(landings);
+  });
+
+  it('records a ghost whenever a run beats the current ghost, even below an old record', () => {
+    const landings: Track = [[1, 1], [2, 2], [3, 3], [4, TRACK_END]];
+    const veteran = saveWith({ best: 80, bestPlanet: 40, ghost: [] });
+    const rep = applyRun(veteran, run({ score: 4, planets: 3, landings }), { rng: seededRng(1) });
+    expect(rep.save.ghost).toEqual(landings);
+    expect(rep.save.bestPlanet).toBe(40);
+  });
+
+  it('keeps the ghost setting off by default and validates it', () => {
+    expect(defaultSave().settings.ghost).toBe(false);
+    expect(normalizeSave({}).settings.ghost).toBe(false);
+    expect(normalizeSave({ settings: { ghost: 'yes' } }).settings.ghost).toBe(false);
+    expect(normalizeSave({ settings: { ghost: true } }).settings.ghost).toBe(true);
   });
 
   it('daily runs pay medals but leave normal records alone', () => {

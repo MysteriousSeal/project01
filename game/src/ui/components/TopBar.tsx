@@ -3,12 +3,13 @@ import { levelInfo } from '../../game/progress';
 import { Save } from '../../game/save';
 import { C, F, fmt, GUTTER, RADIUS, TOP_INSET } from '../theme';
 import { ProgressBar } from './ProgressBar';
+import { Coin } from './Icon';
 
 export function TopBar({ save, onShop }: { save: Save; onShop?: () => void }) {
   const { lvl, into, need } = levelInfo(save.xp);
   const wallet = (
     <>
-      <Text style={styles.wallet}>● {fmt(save.wallet)}</Text>
+      <Text style={styles.wallet}><Coin size={16} /> {fmt(save.wallet)}</Text>
       {onShop && <Text style={styles.shop}>SHOP</Text>}
     </>
   );

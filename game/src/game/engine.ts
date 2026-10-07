@@ -34,7 +34,7 @@ export const TUNING = {
 } as const;
 
 export type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number };
-export type Popup = { x: number; y: number; text: string; life: number; color: string };
+export type Popup = { x: number; y: number; text: string; life: number; color: string; coins?: boolean };
 
 export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost';
 
@@ -149,7 +149,7 @@ function burst(s: State, x: number, y: number, color: string, n: number, speed =
   if (extra > 0) s.particles.splice(0, extra);
 }
 
-const popup = (s: State, x: number, y: number, text: string, color: string, life = 1) => s.popups.push({ x, y, text, color, life });
+const popup = (s: State, x: number, y: number, text: string, color: string, life = 1, coins = false) => s.popups.push({ x, y, text, color, life, coins });
 const banner = (s: State, screenY: number, text: string, color: string, life: number) => popup(s, s.W / 2, s.camY + s.H * screenY, text, color, life);
 
 const record = (s: State, idx: number) => {
@@ -203,7 +203,7 @@ function clearBoss(s: State, p: Planet) {
   s.slowmo = TUNING.slowmoTime;
   s.shake = 14;
   banner(s, 0.32, 'BOSS CLEARED!', C.gold, 1.6);
-  popup(s, p.x, p.y + p.orbit + 24, `+${TUNING.bossBonus}  ● +${TUNING.bossCoins}`, C.gold, 1.4);
+  popup(s, p.x, p.y + p.orbit + 24, `+${TUNING.bossBonus} pts  +${TUNING.bossCoins}`, C.gold, 1.4, true);
   burst(s, p.x, p.y, C.gold, 40, 380);
   burst(s, p.x, p.y, C.pink, 24, 300);
   s.events.push('boss');
@@ -227,7 +227,7 @@ function land(s: State, p: Planet) {
   if (p.gold) {
     p.gold = false;
     s.coinsRun += TUNING.goldCoins;
-    popup(s, p.x, p.y + p.orbit + 20, `+${TUNING.goldCoins} ●`, C.gold);
+    popup(s, p.x, p.y + p.orbit + 20, `+${TUNING.goldCoins}`, C.gold, 1, true);
     burst(s, p.x, p.y, C.gold, 20, 260);
     s.events.push('coin');
   }
@@ -328,7 +328,7 @@ function collectPickups(s: State, dt: number) {
       c.taken = true;
       const value = s.fever > 0 ? 2 : 1;
       s.coinsRun += value;
-      if (value > 1) popup(s, c.x, c.y - 20, `+${value}`, C.gold, 0.6);
+      if (value > 1) popup(s, c.x, c.y - 20, `+${value}`, C.gold, 0.6, true);
       burst(s, c.x, c.y, C.gold, 8, 160);
       s.events.push('coin');
     }

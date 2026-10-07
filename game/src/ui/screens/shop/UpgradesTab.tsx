@@ -3,7 +3,7 @@ import { Save } from '../../../game/save';
 import { upgradeCost, upgradeLevel } from '../../../game/shop';
 import { UPGRADES } from '../../../game/upgrades';
 import { Button } from '../../components/Button';
-import { C, F, fmt, GAP, GUTTER, RADIUS } from '../../theme';
+import { C, F, GAP, GUTTER, RADIUS } from '../../theme';
 
 export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string) => void }) {
   return (
@@ -26,7 +26,8 @@ export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string) =
               <Button label="Max" variant="muted" labelColor={C.mint} style={styles.btn} />
             ) : (
               <Button
-                label={`● ${fmt(cost)}`}
+                label=""
+                price={cost}
                 caption={lvl ? 'UPGRADE' : 'BUY'}
                 variant={save.wallet >= cost ? 'gold' : 'muted'}
                 onPress={() => onBuy(u.id)}
