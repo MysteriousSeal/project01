@@ -1,3 +1,4 @@
+import { ChallengeOutcome, recordChallenge } from './challenge';
 import type { RunResult } from './engine';
 import { advanceMission, fillMissions, isDone, Mission } from './missions';
 import type { Rng } from './rng';
@@ -35,9 +36,13 @@ export type RunReport = {
   completed: Mission[];
   shown: Mission[];
   newBest: boolean;
+  challenge?: ChallengeOutcome;
 };
 
-export function applyRun(save: Save, r: RunResult, rng?: Rng): RunReport {
+export type RunMode = 'normal' | 'daily';
+export type ApplyOptions = { mode?: RunMode; challenge?: string; rng?: Rng; now?: Date };
+
+export function applyRun(save: Save, r: RunResult, { mode = 'normal', challenge: type = '', rng, now }: ApplyOptions = {}): RunReport {
   const levelBefore = levelOf(save);
   const xpGained = xpForRun(r);
   const shown = save.missions.map((m) => advanceMission(m, r));
@@ -46,17 +51,19 @@ export function applyRun(save: Save, r: RunResult, rng?: Rng): RunReport {
   const levelAfter = levelInfo(xp).lvl;
   const levelReward = levelUpReward(levelBefore, levelAfter);
   const missionCoins = completed.reduce((a, m) => a + m.reward, 0);
+  const base: Save = { ...save, xp, wallet: save.wallet + r.coins + missionCoins + levelReward, games: save.games + 1, missions: shown.filter((m) => !isDone(m)) };
+  const report = { xpGained, levelBefore, levelAfter, levelReward, completed, shown };
+
+  if (mode === 'daily') {
+    const recorded = recordChallenge(save.challenges, type, r, now);
+    const next = ensureMissions(recorded ? { ...base, challenges: recorded.challenges, wallet: base.wallet + recorded.outcome.reward } : base, rng);
+    return { ...report, save: next, newBest: false, challenge: recorded?.outcome };
+  }
+
+  const record = r.planets > save.bestPlanet;
   const next = ensureMissions(
-    {
-      ...save,
-      xp,
-      best: Math.max(save.best, r.score),
-      bestPlanet: Math.max(save.bestPlanet, r.planets),
-      wallet: save.wallet + r.coins + missionCoins + levelReward,
-      games: save.games + 1,
-      missions: shown.filter((m) => !isDone(m)),
-    },
+    { ...base, best: Math.max(save.best, r.score), bestPlanet: Math.max(save.bestPlanet, r.planets), ghost: record ? r.landings : save.ghost },
     rng,
   );
-  return { save: next, xpGained, levelBefore, levelAfter, levelReward, completed, shown, newBest: r.score > save.best && r.score > 0 };
+  return { ...report, save: next, newBest: r.score > save.best && r.score > 0 };
 }

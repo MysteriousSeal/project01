@@ -8,8 +8,11 @@ export const DT = 1 / 120;
 
 export const newGame = (seed = 1, opts: Omit<CreateOptions, 'rng'> = {}) => createState(W, H, { ...opts, rng: seededRng(seed) });
 
-export function aimAt(s: State, idx: number, offsetX = 0) {
+export const FROM_BELOW = Math.PI / 2;
+
+export function aimAt(s: State, idx: number, offsetX = 0, openGap = true) {
   const n = planetOf(s, idx);
+  if (n.ring && openGap) n.gapAngle = FROM_BELOW;
   s.flying = true;
   s.flyT = 0;
   s.bx = n.x + offsetX;
@@ -22,9 +25,9 @@ export function flyUntilSettled(s: State, maxSteps = 240) {
   for (let i = 0; i < maxSteps && s.flying && !s.dead; i++) step(s, DT);
 }
 
-export function hop(s: State, offsetX = 0) {
+export function hop(s: State, offsetX = 0, openGap = true) {
   const target = s.cur + 1;
-  aimAt(s, target, offsetX);
+  aimAt(s, target, offsetX, openGap);
   flyUntilSettled(s);
   return target;
 }

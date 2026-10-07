@@ -1,13 +1,17 @@
-import { C, hsl, planetHue } from './palette';
+import { MAX_TRACK, Track, TRACK_END } from './ghost';
+import { C, hsl } from './palette';
 import { between, type Rng } from './rng';
 import { DEFAULT_MODS, type Mods } from './upgrades';
+import { Coin, DEFAULT_RULES, inGap, makePlanet, pickupFor, Planet, PowerKind, PowerUp, Rules, WORLD, zoneIndex, ZONES } from './world';
+
+export { DEFAULT_RULES, isBossIndex, WORLD, zoneIndex, zoneOf, ZONES } from './world';
+export type { Coin, Planet, PowerKind, PowerUp, Rules } from './world';
 
 export const TUNING = {
   launchSpeed: 780,
   captureTolerance: 12,
   feverCaptureTolerance: 30,
   perfectRatio: 0.55,
-  feverEveryCombo: 5,
   maxFlightTime: 1.8,
   offscreenMargin: 30,
   planetsAhead: 4,
@@ -21,53 +25,28 @@ export const TUNING = {
   magnetPull: 650,
   goldCoins: 5,
   milestoneEvery: 25,
-  planetsPerZone: 20,
+  planetsPerZone: WORLD.planetsPerZone,
   maxParticles: 240,
+  bossBonus: 10,
+  bossCoins: 15,
+  slowmoTime: 1.2,
+  slowmoScale: 0.35,
 } as const;
 
-export const ZONES = [
-  { name: 'DEEP SPACE', bg: '#0b1026' },
-  { name: 'NEBULA', bg: '#1d0b2e' },
-  { name: 'ICE FIELD', bg: '#06202b' },
-  { name: 'INFERNO', bg: '#2a0b0b' },
-  { name: 'EMERALD VOID', bg: '#04261a' },
-  { name: 'THE BEYOND', bg: '#000000' },
-];
-
-export const zoneIndex = (planetIdx: number) => Math.min(Math.floor(planetIdx / TUNING.planetsPerZone), ZONES.length - 1);
-export const zoneOf = (planetIdx: number) => ZONES[zoneIndex(planetIdx)];
-
-export type Planet = {
-  idx: number;
-  x: number;
-  baseX: number;
-  y: number;
-  r: number;
-  orbit: number;
-  spin: number;
-  fuse: number;
-  fuseMax: number;
-  moveAmp: number;
-  movePhase: number;
-  hue: number;
-  gold: boolean;
-};
-
-export type Coin = { x: number; y: number; taken: boolean };
-export type PowerKind = 'shield' | 'magnet';
-export type PowerUp = { x: number; y: number; kind: PowerKind; taken: boolean };
 export type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number };
 export type Popup = { x: number; y: number; text: string; life: number; color: string };
 
-export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone';
+export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost';
 
-export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number };
+export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number; landings: Track };
 
 export type State = {
   W: number;
   H: number;
   rng: Rng;
+  fx: Rng;
   mods: Mods;
+  rules: Rules;
   planets: Planet[];
   coins: Coin[];
   powerups: PowerUp[];
@@ -92,8 +71,15 @@ export type State = {
   fever: number;
   magnet: number;
   shield: boolean;
+  slowmo: number;
   bestIdx: number;
   zone: number;
+  ghost: Track;
+  ghostPtr: number;
+  ghostIdx: number;
+  ghostDone: boolean;
+  ghostAhead: boolean;
+  landings: Track;
   dead: boolean;
   deathReason: 'lost' | 'collapse' | null;
   t: number;
@@ -104,30 +90,18 @@ export type State = {
 
 export const POWER_COLOR: Record<PowerKind, string> = { shield: C.cyan, magnet: C.pink };
 
-function makePlanet(rng: Rng, idx: number, prev: Planet | null, W: number, fuseBonus: number): Planet {
-  const r = idx === 0 ? 38 : between(rng, 24, 38);
-  const orbit = r + 28;
-  const margin = orbit + 14;
-  const y = prev ? prev.y - between(rng, 230, 300) : 0;
-  let x = prev ? between(rng, margin, W - margin) : W / 2;
-  if (prev && Math.abs(x - prev.x) < 50) x = prev.x + (x < W / 2 ? 90 : -90);
-  const spin = (rng() < 0.5 ? -1 : 1) * (between(rng, 1.7, 2.3) + Math.min(idx * 0.04, 1.4));
-  const fuseMax = idx === 0 ? 6 : Math.max(1.8, 4.5 - idx * 0.07) + fuseBonus;
-  const moveAmp = idx > 12 && rng() < Math.min(0.15 + idx * 0.01, 0.5) ? between(rng, 30, Math.min(W / 2 - margin, 90)) : 0;
-  return { idx, x, baseX: x, y, r, orbit, spin, fuse: fuseMax, fuseMax, moveAmp, movePhase: between(rng, 0, Math.PI * 2), hue: planetHue(idx), gold: idx > 3 && rng() < 0.12 };
-}
+export type CreateOptions = { bestIdx?: number; mods?: Mods; rules?: Rules; rng?: Rng; fx?: Rng; ghost?: Track };
 
-export type CreateOptions = { bestIdx?: number; mods?: Mods; rng?: Rng };
-
-export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_MODS, rng = Math.random }: CreateOptions = {}): State {
-  const first = makePlanet(rng, 0, null, W, 0);
+export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_MODS, rules = DEFAULT_RULES, rng = Math.random, fx = Math.random, ghost = [] }: CreateOptions = {}): State {
+  const first = makePlanet(rng, 0, null, W, 0, rules);
   const s: State = {
-    W, H, rng, mods,
+    W, H, rng, fx, mods, rules,
     planets: [first], coins: [], powerups: [], particles: [], popups: [], trail: [], events: [],
     cur: 0, ang: -Math.PI / 2, bx: 0, by: 0, vx: 0, vy: 0, flying: false, flyT: 0,
     camY: first.y - H * TUNING.cameraAnchor,
     score: 0, coinsRun: 0, perfects: 0, combo: 0, bestCombo: 0,
-    fever: 0, magnet: 0, shield: mods.startShield, bestIdx, zone: 0,
+    fever: 0, magnet: 0, shield: mods.startShield && rules.powerups, slowmo: 0, bestIdx, zone: 0,
+    ghost, ghostPtr: 0, ghostIdx: 0, ghostDone: ghost.length === 0, ghostAhead: false, landings: [],
     dead: false, deathReason: null, t: 0, shake: 0, shakeX: 0, shakeY: 0,
   };
   ensurePlanets(s);
@@ -143,21 +117,18 @@ export const launchDir = (s: State) => {
   return { x: -Math.sin(s.ang) * dir, y: Math.cos(s.ang) * dir };
 };
 
-export const runResult = (s: State): RunResult => ({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur });
+export const runResult = (s: State): RunResult => ({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur, landings: s.landings });
 
 export const isSettled = (s: State) => s.dead && s.particles.length === 0 && s.popups.length === 0;
+export const ghostActive = (s: State) => !s.ghostDone;
 
 function ensurePlanets(s: State) {
   let last = s.planets[s.planets.length - 1];
   while (last.y > s.camY - s.H * 0.6 || last.idx < s.cur + TUNING.planetsAhead) {
-    const p = makePlanet(s.rng, last.idx + 1, last, s.W, s.mods.fuseBonus);
-    const dx = last.x - p.x;
-    const dy = last.y - p.y;
-    const d = Math.hypot(dx, dy);
-    const off = p.orbit + 34;
-    const at = { x: p.x + (dx / d) * off, y: p.y + (dy / d) * off };
-    if (p.idx > 4 && s.rng() < s.mods.powerChance) s.powerups.push({ ...at, kind: s.rng() < 0.5 ? 'shield' : 'magnet', taken: false });
-    else if (s.rng() < 0.65) s.coins.push({ ...at, taken: false });
+    const p = makePlanet(s.rng, last.idx + 1, last, s.W, s.mods.fuseBonus, s.rules);
+    const { coin, power } = pickupFor(s.rng, last, p, s.mods.powerChance, s.rules);
+    if (coin) s.coins.push(coin);
+    if (power) s.powerups.push(power);
     s.planets.push(p);
     last = p;
   }
@@ -169,10 +140,10 @@ function ensurePlanets(s: State) {
 
 function burst(s: State, x: number, y: number, color: string, n: number, speed = 220) {
   for (let i = 0; i < n; i++) {
-    const a = s.rng() * Math.PI * 2;
-    const v = between(s.rng, speed * 0.3, speed);
-    const max = between(s.rng, 0.35, 0.7);
-    s.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: max, max, color, size: between(s.rng, 3, 7) });
+    const a = s.fx() * Math.PI * 2;
+    const v = between(s.fx, speed * 0.3, speed);
+    const max = between(s.fx, 0.35, 0.7);
+    s.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: max, max, color, size: between(s.fx, 3, 7) });
   }
   const extra = s.particles.length - TUNING.maxParticles;
   if (extra > 0) s.particles.splice(0, extra);
@@ -180,6 +151,10 @@ function burst(s: State, x: number, y: number, color: string, n: number, speed =
 
 const popup = (s: State, x: number, y: number, text: string, color: string, life = 1) => s.popups.push({ x, y, text, color, life });
 const banner = (s: State, screenY: number, text: string, color: string, life: number) => popup(s, s.W / 2, s.camY + s.H * screenY, text, color, life);
+
+const record = (s: State, idx: number) => {
+  if (s.landings.length < MAX_TRACK) s.landings.push([s.t, idx]);
+};
 
 function orbit(s: State, p: Planet) {
   s.bx = p.x + Math.cos(s.ang) * p.orbit;
@@ -206,6 +181,7 @@ function fail(s: State, reason: 'lost' | 'collapse') {
   s.deathReason = reason;
   s.shake = 14;
   s.combo = 0;
+  record(s, TRACK_END);
   burst(s, s.bx, s.by, C.danger, 26, 320);
   s.events.push('death');
 }
@@ -220,10 +196,23 @@ export function tap(s: State) {
   s.events.push('launch');
 }
 
+function clearBoss(s: State, p: Planet) {
+  p.ring = false;
+  s.score += TUNING.bossBonus;
+  s.coinsRun += TUNING.bossCoins;
+  s.slowmo = TUNING.slowmoTime;
+  s.shake = 14;
+  banner(s, 0.32, 'BOSS CLEARED!', C.gold, 1.6);
+  popup(s, p.x, p.y + p.orbit + 24, `+${TUNING.bossBonus}  ● +${TUNING.bossCoins}`, C.gold, 1.4);
+  burst(s, p.x, p.y, C.gold, 40, 380);
+  burst(s, p.x, p.y, C.pink, 24, 300);
+  s.events.push('boss');
+}
+
+const isPerfectApproach = (s: State, p: Planet) => Math.abs((s.vx * (p.y - s.by) - s.vy * (p.x - s.bx)) / TUNING.launchSpeed) < p.r * TUNING.perfectRatio;
+
 function land(s: State, p: Planet) {
-  const dx = p.x - s.bx;
-  const dy = p.y - s.by;
-  const perfect = Math.abs((s.vx * dy - s.vy * dx) / TUNING.launchSpeed) < p.r * TUNING.perfectRatio;
+  const perfect = isPerfectApproach(s, p);
   const gained = p.idx - s.cur;
   const before = s.score;
 
@@ -231,6 +220,9 @@ function land(s: State, p: Planet) {
   s.flying = false;
   s.ang = Math.atan2(s.by - p.y, s.bx - p.x);
   p.fuse = p.fuseMax;
+  record(s, p.idx);
+
+  if (p.ring) clearBoss(s, p);
 
   if (p.gold) {
     p.gold = false;
@@ -247,10 +239,10 @@ function land(s: State, p: Planet) {
     s.score += gained + s.combo;
     popup(s, p.x, p.y - p.orbit - 10, `PERFECT +${gained + s.combo}`, C.mint, 0.9);
     burst(s, s.bx, s.by, C.mint, 14, 240);
-    s.shake = 5;
+    s.shake = Math.max(s.shake, 5);
     s.events.push('perfect');
-    if (s.combo % TUNING.feverEveryCombo === 0) {
-      s.fever = s.mods.feverTime;
+    if (s.combo % s.rules.feverEvery === 0) {
+      s.fever = s.mods.feverTime + s.rules.feverBonus;
       s.shake = 12;
       banner(s, 0.42, 'FEVER!', C.pink, 1.3);
       burst(s, s.bx, s.by, C.pink, 30, 340);
@@ -270,6 +262,12 @@ function land(s: State, p: Planet) {
     s.events.push('best');
   }
 
+  if (ghostActive(s) && s.ghostAhead && s.cur > s.ghostIdx) {
+    s.ghostAhead = false;
+    banner(s, 0.22, 'PASSED YOUR GHOST', C.text, 1.3);
+    s.events.push('ghost');
+  }
+
   const z = zoneIndex(p.idx);
   if (z > s.zone) {
     s.zone = z;
@@ -280,9 +278,15 @@ function land(s: State, p: Planet) {
   const m = Math.floor(s.score / TUNING.milestoneEvery);
   if (m > Math.floor(before / TUNING.milestoneEvery)) {
     banner(s, 0.35, `${m * TUNING.milestoneEvery}!`, C.text, 1.2);
-    s.shake = 9;
+    s.shake = Math.max(s.shake, 9);
     s.events.push('milestone');
   }
+}
+
+function rejected(s: State, text: string) {
+  popup(s, s.bx, s.by - 30, text, C.danger, 1);
+  burst(s, s.bx, s.by, C.danger, 16, 260);
+  fail(s, 'lost');
 }
 
 function fly(s: State, dt: number) {
@@ -291,7 +295,11 @@ function fly(s: State, dt: number) {
   s.flyT += dt;
   const tol = s.fever > 0 ? TUNING.feverCaptureTolerance : TUNING.captureTolerance;
   const target = s.planets.find((p) => p.idx > s.cur && Math.hypot(p.x - s.bx, p.y - s.by) < p.orbit + tol);
-  if (target) return land(s, target);
+  if (target) {
+    if (target.ring && !inGap(target, s.bx, s.by)) return rejected(s, 'BLOCKED!');
+    if (s.rules.perfectOnly && !isPerfectApproach(s, target)) return rejected(s, 'NOT PERFECT!');
+    return land(s, target);
+  }
   const m = TUNING.offscreenMargin;
   if (s.bx < -m || s.bx > s.W + m || s.by - s.camY > s.H + m || s.flyT > TUNING.maxFlightTime) fail(s, 'lost');
 }
@@ -351,10 +359,21 @@ function extendTrail(s: State) {
   if (s.trail.length > TUNING.trailLength) s.trail.splice(0, s.trail.length - TUNING.trailLength);
 }
 
+function advanceGhost(s: State) {
+  const g = s.ghost;
+  while (s.ghostPtr < g.length && g[s.ghostPtr][0] <= s.t) {
+    const idx = g[s.ghostPtr][1];
+    if (idx !== TRACK_END) s.ghostIdx = idx;
+    s.ghostPtr++;
+  }
+  if (s.ghostPtr >= g.length) s.ghostDone = true;
+  if (!s.ghostDone && s.ghostIdx > s.cur) s.ghostAhead = true;
+}
+
 function tickEffects(s: State, dt: number) {
   s.shake = Math.max(0, s.shake - dt * 40);
-  s.shakeX = s.shake ? (s.rng() - 0.5) * s.shake : 0;
-  s.shakeY = s.shake ? (s.rng() - 0.5) * s.shake : 0;
+  s.shakeX = s.shake ? (s.fx() - 0.5) * s.shake : 0;
+  s.shakeY = s.shake ? (s.fx() - 0.5) * s.shake : 0;
   for (const q of s.particles) {
     q.x += q.vx * dt;
     q.y += q.vy * dt;
@@ -370,12 +389,18 @@ function tickEffects(s: State, dt: number) {
   s.popups = s.popups.filter((u) => u.life > 0);
 }
 
-export function step(s: State, dt: number) {
+export function step(s: State, realDt: number) {
+  const dt = s.slowmo > 0 ? realDt * TUNING.slowmoScale : realDt;
+  s.slowmo = Math.max(0, s.slowmo - realDt);
   s.t += dt;
-  for (const p of s.planets) if (p.moveAmp) p.x = p.baseX + Math.sin(s.t * 1.3 + p.movePhase) * p.moveAmp;
+  for (const p of s.planets) {
+    if (p.moveAmp) p.x = p.baseX + Math.sin(s.t * 1.3 + p.movePhase) * p.moveAmp;
+    if (p.ring) p.gapAngle += p.gapSpin * dt;
+  }
   tickEffects(s, dt);
   if (s.dead) return;
 
+  advanceGhost(s);
   s.fever = Math.max(0, s.fever - dt);
   s.magnet = Math.max(0, s.magnet - dt);
   if (s.flying) fly(s, dt);

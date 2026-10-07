@@ -12,6 +12,8 @@ export const C = {
   pink: '#ff70a6',
   cyan: '#4cc9f0',
   danger: '#ff5d73',
+  bronze: '#d08a4f',
+  silver: '#c9d3e6',
 } as const;
 
 export const planetHue = (idx: number) => (idx * 37 + 200) % 360;

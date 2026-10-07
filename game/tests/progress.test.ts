@@ -5,7 +5,7 @@ import { applyRun, ensureMissions, levelInfo, levelUpReward, xpForLevel, xpForRu
 import { seededRng } from '../src/game/rng';
 import { saveWith } from './helpers';
 
-const run = (patch: Partial<RunResult> = {}): RunResult => ({ score: 0, coins: 0, perfects: 0, bestCombo: 0, planets: 0, ...patch });
+const run = (patch: Partial<RunResult> = {}): RunResult => ({ score: 0, coins: 0, perfects: 0, bestCombo: 0, planets: 0, landings: [], ...patch });
 const mission = (patch: Partial<Mission>): Mission => ({ id: `m-${Math.random()}`, kind: 'score', target: 10, progress: 0, reward: 20, ...patch });
 
 describe('levels', () => {
@@ -70,7 +70,7 @@ describe('applyRun', () => {
 
   it('updates records, pays completed missions and refills them', () => {
     const r = run({ score: 12, coins: 3, perfects: 1, bestCombo: 1, planets: 9 });
-    const rep = applyRun(base(), r, seededRng(1));
+    const rep = applyRun(base(), r, { rng: seededRng(1) });
     expect(rep.newBest).toBe(true);
     expect(rep.save.best).toBe(12);
     expect(rep.save.bestPlanet).toBe(9);
@@ -84,16 +84,16 @@ describe('applyRun', () => {
   });
 
   it('keeps records when the run is worse and never flags a zero score as best', () => {
-    const rep = applyRun(saveWith(), run(), seededRng(1));
+    const rep = applyRun(saveWith(), run(), { rng: seededRng(1) });
     expect(rep.newBest).toBe(false);
-    const worse = applyRun(base(), run({ score: 2, planets: 1 }), seededRng(1));
+    const worse = applyRun(base(), run({ score: 2, planets: 1 }), { rng: seededRng(1) });
     expect(worse.save.best).toBe(10);
     expect(worse.save.bestPlanet).toBe(4);
     expect(worse.newBest).toBe(false);
   });
 
   it('pays level-up rewards when crossing levels', () => {
-    const rep = applyRun(saveWith({ xp: xpForLevel(1) - 1 }), run({ score: 5 }), seededRng(1));
+    const rep = applyRun(saveWith({ xp: xpForLevel(1) - 1 }), run({ score: 5 }), { rng: seededRng(1) });
     expect(rep.levelBefore).toBe(1);
     expect(rep.levelAfter).toBe(2);
     expect(rep.levelReward).toBe(levelUpReward(1, 2));

@@ -1,7 +1,12 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Skin, TrailStyle } from '../../game/cosmetics';
-import { createState, GameEvent, isSettled, launchDir, Planet, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, zoneOf } from '../../game/engine';
+import { nextMedal, statOf } from '../../game/challenge';
+import { ChallengeType, statUnit } from '../../game/challengeTypes';
+import { createState, GameEvent, ghostActive, isSettled, launchDir, Planet, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, WORLD, zoneOf } from '../../game/engine';
+import { Track } from '../../game/ghost';
+import { seededRng } from '../../game/rng';
+import { inGap } from '../../game/world';
 import { hsl } from '../../game/palette';
 import { DEFAULT_MODS, Mods } from '../../game/upgrades';
 import { Ball } from '../components/Ball';
@@ -18,6 +23,9 @@ type Props = {
   mods?: Mods;
   showHint?: boolean;
   bestIdx?: number;
+  seed?: number;
+  ghost?: Track;
+  challenge?: ChallengeType;
   onEvent?: (e: GameEvent) => void;
   onEnd: (r: RunResult) => void;
 };
@@ -56,8 +64,8 @@ function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'])
   }, [s]);
 }
 
-export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHint, bestIdx = 0, onEvent, onEnd }: Props) {
-  const [g] = useState(() => createState(W, H, { bestIdx, mods }));
+export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHint, bestIdx = 0, seed, ghost, challenge, onEvent, onEnd }: Props) {
+  const [g] = useState(() => createState(W, H, { bestIdx, mods, ghost, rules: challenge?.rules, rng: seed === undefined ? Math.random : seededRng(seed) }));
   useGameLoop(g, onEvent, onEnd);
 
   const shake = g.shake ? { transform: [{ translateX: g.shakeX }, { translateY: g.shakeY }] } : null;
@@ -69,11 +77,13 @@ export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHi
   const bestPlanet = g.bestIdx > 0 ? g.planets.find((p) => p.idx === g.bestIdx) : undefined;
   const alive = !g.dead;
   const aim = alive && !g.flying ? launchDir(g) : null;
+  const ghostPlanet = alive && ghostActive(g) ? g.planets.find((p) => p.idx === g.ghostIdx) : undefined;
 
   return (
     <Pressable style={StyleSheet.absoluteFill} onPressIn={() => tap(g)} accessibilityLabel="Game area. Tap to launch.">
       <View style={[StyleSheet.absoluteFill, { backgroundColor: zoneOf(g.cur).bg }]}>
         {fever && <View style={[StyleSheet.absoluteFill, { backgroundColor: C.pink, opacity: 0.08 + 0.05 * Math.sin(g.t * 12) }]} />}
+        {g.slowmo > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: C.gold, opacity: 0.1 * (g.slowmo / TUNING.slowmoTime) }]} />}
         <Starfield width={W} height={H} offset={cy} />
       </View>
 
@@ -85,6 +95,12 @@ export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHi
         )}
 
         {g.planets.map((p) => <PlanetView key={p.idx} p={p} active={p.idx === g.cur} top={p.y - cy} t={g.t} />)}
+
+        {ghostPlanet && (
+          <View style={[styles.ghost, { left: ghostPlanet.x + Math.cos(g.t * 2.4) * ghostPlanet.orbit - 11, top: ghostPlanet.y + Math.sin(g.t * 2.4) * ghostPlanet.orbit - cy - 11 }]}>
+            <Text style={styles.ghostTxt}>GHOST</Text>
+          </View>
+        )}
 
         {g.coins.map((c, i) => (c.taken ? null : <View key={`c${i}`} style={[styles.coin, { left: c.x - 9, top: c.y - cy - 9, transform: [{ scaleX: Math.abs(Math.cos(g.t * 3 + i)) * 0.7 + 0.3 }] }]} />))}
 
@@ -113,7 +129,7 @@ export function GameScreen({ W, H, skin, trailStyle, mods = DEFAULT_MODS, showHi
         ))}
       </View>
 
-      <Hud g={g} fever={fever} />
+      <Hud g={g} fever={fever} challenge={challenge} />
 
       {showHint && g.score === 0 && alive && (
         <View style={styles.hint} pointerEvents="none">
@@ -129,9 +145,11 @@ function PlanetView({ p, active, top, t }: { p: Planet; active: boolean; top: nu
   const k = active ? Math.max(0.15, p.fuse / p.fuseMax) : 1;
   const r = p.r * (0.55 + 0.45 * k);
   const danger = active && k < 0.35;
-  const color = danger ? C.danger : p.gold ? C.gold : hsl(p.hue, 70, 60);
+  const color = danger ? C.danger : p.gold ? C.gold : p.boss ? hsl(285, 55, 45) : hsl(p.hue, 70, 60);
   return (
     <>
+      {p.ring && <BossRing p={p} top={top} />}
+      {p.boss && <Text style={[styles.bossTag, { left: p.x - 50, top: top - p.orbit - 34 }]}>{p.ring ? 'BOSS' : 'CLEARED'}</Text>}
       <View style={[styles.ring, { left: p.x - p.orbit, top: top - p.orbit, width: p.orbit * 2, height: p.orbit * 2, borderRadius: p.orbit, borderColor: p.gold ? '#ffd34daa' : active ? '#ffffff55' : '#ffffff22', borderWidth: p.gold ? 2.5 : 1.5 }]} />
       <View style={[styles.abs, { left: p.x - r, top: top - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: color, opacity: danger && Math.floor(t * 10) % 2 ? 0.6 : 1 }]} />
       <View style={[styles.abs, { left: p.x - r * 0.45, top: top - r * 0.55, width: r * 0.5, height: r * 0.5, borderRadius: r, backgroundColor: '#ffffff40' }]} />
@@ -139,15 +157,47 @@ function PlanetView({ p, active, top, t }: { p: Planet; active: boolean; top: nu
   );
 }
 
-function Hud({ g, fever }: { g: State; fever: boolean }) {
+const RING_DOTS = 30;
+
+function BossRing({ p, top }: { p: Planet; top: number }) {
+  return (
+    <>
+      {Array.from({ length: RING_DOTS }, (_, i) => {
+        const a = (i / RING_DOTS) * Math.PI * 2;
+        const x = p.x + Math.cos(a) * p.orbit;
+        const y = p.y + Math.sin(a) * p.orbit;
+        return inGap(p, x, y) ? null : <View key={i} style={[styles.ringDot, { left: x - 4, top: y - p.y + top - 4 }]} />;
+      })}
+      {[-1, 1].map((side) => {
+        const a = p.gapAngle + side * WORLD.bossGapHalf;
+        return <View key={side} style={[styles.gapEdge, { left: p.x + Math.cos(a) * p.orbit - 6, top: top + Math.sin(a) * p.orbit - 6 }]} />;
+      })}
+    </>
+  );
+}
+
+function ghostLabel(g: State) {
+  const lead = g.ghostIdx - g.cur;
+  if (lead > 0) return { text: `GHOST AHEAD +${lead}`, color: C.dim };
+  if (lead < 0) return { text: `AHEAD OF GHOST +${-lead}`, color: C.mint };
+  return { text: 'NECK AND NECK', color: C.text };
+}
+
+function Hud({ g, fever, challenge }: { g: State; fever: boolean; challenge?: ChallengeType }) {
+  const next = challenge ? nextMedal(statOf(challenge, { score: g.score, coins: g.coinsRun }), challenge) : undefined;
+  const bossNext = g.planets.find((p) => p.idx === g.cur + 1)?.ring;
+  const ghost = ghostActive(g) && !g.dead ? ghostLabel(g) : null;
   return (
     <View style={styles.hud} pointerEvents="none">
+      {challenge && <Text style={styles.daily}>{challenge.glyph} {challenge.name.toUpperCase()} · {next ? `${next.name} at ${next.score} ${statUnit(challenge)}` : 'GOLD!'}</Text>}
       <Text style={styles.score}>{g.score}</Text>
       <Text style={styles.coins}>● {g.coinsRun}</Text>
-      {g.combo > 1 && <Text style={styles.combo}>COMBO x{g.combo}{!fever && g.combo % TUNING.feverEveryCombo === TUNING.feverEveryCombo - 1 ? '  · next = FEVER' : ''}</Text>}
-      {fever && <Timer label="FEVER  ×2 ●" value={g.fever / g.mods.feverTime} color={C.pink} />}
+      {g.combo > 1 && <Text style={styles.combo}>COMBO x{g.combo}{!fever && g.combo % g.rules.feverEvery === g.rules.feverEvery - 1 ? '  · next = FEVER' : ''}</Text>}
+      {fever && <Timer label="FEVER  ×2 ●" value={g.fever / (g.mods.feverTime + g.rules.feverBonus)} color={C.pink} />}
       {g.magnet > 0 && <Timer label="MAGNET" value={g.magnet / g.mods.magnetTime} color={C.pink} />}
       {g.shield && <Text style={[styles.combo, { color: C.cyan }]}>SHIELD ON</Text>}
+      {ghost && <Text style={[styles.status, { color: ghost.color }]}>{ghost.text}</Text>}
+      {bossNext && !g.dead && <Text style={[styles.status, { color: C.pink }]}>BOSS AHEAD · FLY THROUGH THE GAP</Text>}
     </View>
   );
 }
@@ -179,6 +229,13 @@ const styles = StyleSheet.create({
   magnetRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: C.pink },
   timer: { alignItems: 'center', marginTop: 6, gap: 3 },
   timerTxt: { fontWeight: '900', fontSize: 14, letterSpacing: 1 },
+  ghost: { position: 'absolute', width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#ffffffaa', backgroundColor: '#ffffff26', alignItems: 'center' },
+  ghostTxt: { position: 'absolute', top: -16, left: -19, width: 60, textAlign: 'center', color: '#ffffffaa', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  ringDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: C.pink, opacity: 0.85 },
+  gapEdge: { position: 'absolute', width: 12, height: 12, borderRadius: 6, backgroundColor: C.mint },
+  bossTag: { position: 'absolute', width: 100, textAlign: 'center', color: C.pink, fontFamily: F.display, fontWeight: '900', fontSize: 14, letterSpacing: 3 },
+  daily: { color: C.gold, fontSize: 12, fontWeight: '900', letterSpacing: 1.5, marginBottom: 2 },
+  status: { fontSize: 13, fontWeight: '900', letterSpacing: 1, marginTop: 6 },
   hint: { position: 'absolute', bottom: 90, left: 0, right: 0, alignItems: 'center' },
   hintTxt: { color: C.text, fontSize: 20, fontWeight: '800', textAlign: 'center' },
   hintSub: { color: C.mint, fontSize: 15, fontWeight: '700', marginTop: 8 },

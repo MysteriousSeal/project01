@@ -1,4 +1,7 @@
+import { CHALLENGE_ATTEMPTS, ChallengeSlot, DailyChallenges, emptyChallenges, MEDAL_TIERS } from './challenge';
+import { CHALLENGE_TYPES, CHALLENGES_PER_DAY } from './challengeTypes';
 import { CATALOG, DEFAULT_COSMETIC } from './cosmetics';
+import { parseTrack, Track } from './ghost';
 import { Mission, MISSION_KINDS, MISSION_SLOTS } from './missions';
 import { maxLevel, UPGRADES } from './upgrades';
 
@@ -16,6 +19,8 @@ export type Save = {
   missions: Mission[];
   lastDaily: string;
   streak: number;
+  ghost: Track;
+  challenges: DailyChallenges;
 };
 
 export const defaultSave = (): Save => ({
@@ -32,6 +37,8 @@ export const defaultSave = (): Save => ({
   missions: [],
   lastDaily: '',
   streak: 0,
+  ghost: [],
+  challenges: emptyChallenges(),
 });
 
 type Raw = Record<string, unknown>;
@@ -51,6 +58,26 @@ function mission(raw: unknown): Mission | null {
   const target = count(m.target);
   if (!kind || !target || typeof m.id !== 'string') return null;
   return { id: m.id, kind, target, progress: Math.min(count(m.progress), target), reward: count(m.reward) };
+}
+
+function slot(raw: unknown): ChallengeSlot | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const c = raw as Raw;
+  if (!CHALLENGE_TYPES.some((t) => t.id === c.type)) return null;
+  return {
+    type: c.type as string,
+    attempts: Math.min(count(c.attempts), CHALLENGE_ATTEMPTS),
+    best: count(c.best),
+    medal: Math.min(count(c.medal), MEDAL_TIERS.length),
+    ghost: parseTrack(c.ghost),
+  };
+}
+
+function challenges(raw: unknown, legacy: unknown): DailyChallenges {
+  const src = (raw && typeof raw === 'object' ? raw : legacy && typeof legacy === 'object' ? legacy : {}) as Raw;
+  const slots = Array.isArray(src.slots) ? src.slots.map(slot).filter((x): x is ChallengeSlot => x !== null) : [];
+  const unique = slots.filter((x, i) => slots.findIndex((y) => y.type === x.type) === i).slice(0, CHALLENGES_PER_DAY);
+  return { day: unique.length ? text(src.day) : '', slots: unique, streak: count(src.streak), lastMedalDay: text(src.lastMedalDay) };
 }
 
 export function normalizeSave(input: unknown): Save {
@@ -86,5 +113,7 @@ export function normalizeSave(input: unknown): Save {
     missions: missions.slice(0, MISSION_SLOTS),
     lastDaily: text(r.lastDaily),
     streak: count(r.streak),
+    ghost: parseTrack(r.ghost),
+    challenges: challenges(r.challenges, r.challenge),
   };
 }

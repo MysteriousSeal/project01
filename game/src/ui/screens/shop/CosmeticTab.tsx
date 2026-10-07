@@ -2,7 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Cosmetic } from '../../../game/cosmetics';
 import { Button } from '../../components/Button';
-import { BOTTOM_INSET, C, F, fmt, GAP, GUTTER, RADIUS } from '../../theme';
+import { C, F, fmt, GAP, GUTTER, RADIUS } from '../../theme';
 
 type Props = {
   items: Cosmetic[];
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   selected: { borderColor: C.sky },
   name: { color: C.text, fontWeight: '800', marginTop: 8, fontSize: 13 },
   tag: { fontFamily: F.mono, fontWeight: '700', marginTop: 3, fontSize: 12 },
-  panel: { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: GUTTER, marginTop: 6, marginBottom: BOTTOM_INSET + 4, padding: 14, borderRadius: RADIUS.xl, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
+  panel: { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: GUTTER, marginTop: 6, marginBottom: 14, padding: 14, borderRadius: RADIUS.xl, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
   info: { flex: 1, gap: 8 },
   selName: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 22 },
   selSub: { color: C.dim, fontSize: 13, marginTop: 2 },

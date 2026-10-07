@@ -4,13 +4,12 @@ import { CATALOG, CosmeticKind, skinById, trailById } from '../../../game/cosmet
 import { Save } from '../../../game/save';
 import { buyCosmetic, buyUpgrade, equipCosmetic, ShopResult } from '../../../game/shop';
 import { haptic } from '../../../services/haptics';
-import { BackButton } from '../../components/BackButton';
 import { Ball } from '../../components/Ball';
 import { OrbitHero } from '../../components/OrbitHero';
 import { TopBar } from '../../components/TopBar';
 import { TrailDot } from '../../components/TrailDot';
 import { useReducedMotion } from '../../hooks';
-import { C, F, FILL, GUTTER, RADIUS } from '../../theme';
+import { C, F, GUTTER, RADIUS } from '../../theme';
 import { CosmeticTab } from './CosmeticTab';
 import { UpgradesTab } from './UpgradesTab';
 
@@ -23,7 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
 const HERO = 120;
 const HERO_PLANET = '#3a4590';
 
-export function ShopScreen({ save, onChange, onClose }: { save: Save; onChange: (s: Save) => void; onClose: () => void }) {
+export function ShopScreen({ save, onChange }: { save: Save; onChange: (s: Save) => void }) {
   const [tab, setTab] = useState<Tab>('skin');
   const still = useReducedMotion();
   const skin = skinById(save.skin);
@@ -47,10 +46,7 @@ export function ShopScreen({ save, onChange, onClose }: { save: Save; onChange: 
     <View style={styles.root}>
       <TopBar save={save} />
       <View style={styles.head}>
-        <View style={styles.titleWrap} pointerEvents="none">
-          <Text style={styles.title} accessibilityRole="header">Shop</Text>
-        </View>
-        <BackButton onPress={onClose} />
+        <Text style={styles.title} accessibilityRole="header">Shop</Text>
         {tab !== 'upgrades' && <Text style={styles.count}>{save[CATALOG[tab].owned].length}/{CATALOG[tab].items.length} owned</Text>}
       </View>
 
@@ -99,10 +95,9 @@ export function ShopScreen({ save, onChange, onClose }: { save: Save; onChange: 
 }
 
 const styles = StyleSheet.create({
-  root: { ...FILL, backgroundColor: C.space },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: GUTTER, paddingTop: 8, paddingBottom: 20 },
-  titleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  title: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 26, letterSpacing: 2 },
+  root: { flex: 1, backgroundColor: C.space },
+  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: GUTTER, paddingTop: 4, paddingBottom: 16 },
+  title: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 30, letterSpacing: 2 },
   count: { color: C.dim, fontFamily: F.mono, fontSize: 12, textAlign: 'right' },
   tabs: { flexDirection: 'row', marginHorizontal: GUTTER, marginBottom: 12, padding: 4, borderRadius: RADIUS.lg, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: RADIUS.sm + 2 },

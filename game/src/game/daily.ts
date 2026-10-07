@@ -4,11 +4,13 @@ export const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.g
 
 const yesterdayOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 
+export const yesterdayKey = (d: Date) => dayKey(yesterdayOf(d));
+
 export const dailyReward = (streak: number) => 15 + Math.min(streak, 7) * 10;
 
 export function dailyStatus(save: Save, now: Date = new Date()) {
   const today = dayKey(now);
-  const streak = save.lastDaily === dayKey(yesterdayOf(now)) ? save.streak + 1 : 1;
+  const streak = save.lastDaily === yesterdayKey(now) ? save.streak + 1 : 1;
   return { available: save.lastDaily !== today, streak, reward: dailyReward(streak), today };
 }
 

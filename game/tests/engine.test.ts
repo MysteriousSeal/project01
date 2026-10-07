@@ -79,7 +79,7 @@ describe('landing', () => {
 
   it('starts fever on every fifth consecutive perfect', () => {
     const s = newGame(3);
-    for (let i = 0; i < TUNING.feverEveryCombo - 1; i++) hop(s);
+    for (let i = 0; i < s.rules.feverEvery - 1; i++) hop(s);
     expect(s.fever).toBe(0);
     eventsOf(s);
     hop(s);

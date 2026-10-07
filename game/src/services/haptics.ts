@@ -24,6 +24,8 @@ const EVENT_CUES: Record<GameEvent, Cue | null> = {
   best: 'success',
   power: 'success',
   zone: null,
+  boss: 'heavy',
+  ghost: 'success',
 };
 
 export function haptic(cue: Cue) {
