@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { GameEvent } from './src/game/engine';
 import GameView, { RunResult } from './src/game/GameView';
 import { applyRun, claimDaily, ensureMissions, RunReport } from './src/game/progress';
@@ -33,10 +33,26 @@ export default function App() {
   const [save, setSave] = useState<Save>(() => ensureMissions(defaultSave()));
   const [result, setResult] = useState<RunResult | null>(null);
   const [report, setReport] = useState<RunReport | null>(null);
+  const [shop, setShop] = useState(false);
 
   useEffect(() => {
     loadSave().then((s) => setSave(ensureMissions(s)));
   }, []);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (shop) {
+        setShop(false);
+        return true;
+      }
+      if (screen === 'over') {
+        setScreen('home');
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [shop, screen]);
 
   const commit = (s: Save) => {
     setSave(s);
@@ -57,7 +73,6 @@ export default function App() {
     setScreen('over');
   };
 
-  const [shop, setShop] = useState(false);
   const openShop = () => setShop(true);
   const skin = skinById(save.skin);
 

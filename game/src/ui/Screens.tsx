@@ -3,6 +3,7 @@ import { RunResult } from '../game/GameView';
 import { levelInfo, missionLabel, RunReport } from '../game/progress';
 import { Mission, Save } from '../game/save';
 import { nextSkin } from '../game/skins';
+import { BackButton } from './BackButton';
 import { F, fmt } from './theme';
 
 export function GameOver({ result, report, onRetry, onHome, onShop }: { result: RunResult; report: RunReport; onRetry: () => void; onHome: () => void; onShop: () => void }) {
@@ -34,9 +35,7 @@ export function GameOver({ result, report, onRetry, onHome, onShop }: { result: 
         <Pressable style={styles.retryBtn} onPress={onRetry}>
           <Text style={styles.playTxt}>PLAY AGAIN</Text>
         </Pressable>
-        <Pressable onPress={onHome} hitSlop={12}>
-          <Text style={styles.link}>HOME</Text>
-        </Pressable>
+        <BackButton label="Home" onPress={onHome} style={{ alignSelf: 'center', marginTop: 14 }} />
       </View>
     </View>
   );
@@ -131,7 +130,6 @@ export const styles = StyleSheet.create({
   statLbl: { color: '#ffffff99', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
   playBtn: { marginTop: 24, backgroundColor: '#7dffb2', paddingHorizontal: 44, paddingVertical: 18, borderRadius: 40 },
   playTxt: { color: '#0b1026', fontSize: 22, fontWeight: '900', letterSpacing: 2 },
-  link: { color: '#ffffffaa', fontSize: 16, fontWeight: '800', letterSpacing: 2, marginTop: 16 },
   unlock: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 12, backgroundColor: '#ffffff10', borderWidth: 1.5, borderColor: 'transparent' },
   unlockReady: { borderColor: '#ffd34d' },
   unlockDot: { width: 24, height: 24, borderRadius: 12, shadowOpacity: 1, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },

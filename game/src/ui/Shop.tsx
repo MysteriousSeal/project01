@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Save } from '../game/save';
 import { Skin, SKINS } from '../game/skins';
+import { BackButton } from './BackButton';
 import { OrbitHero, useReducedMotion } from './Home';
 import { TopBar } from './Screens';
 import { C, F, fmt } from './theme';
@@ -25,11 +26,11 @@ export function Shop({ save, onChange, onClose, onBuy }: { save: Save; onChange:
     <View style={styles.root}>
       <TopBar save={save} />
       <View style={styles.head}>
-        <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button">
-          <Text style={styles.back}>‹ Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Skins</Text>
-        <Text style={styles.count}>{save.owned.length}/{SKINS.length}</Text>
+        <View style={styles.titleWrap} pointerEvents="none">
+          <Text style={styles.title}>Skins</Text>
+        </View>
+        <BackButton onPress={onClose} />
+        <Text style={styles.count}>{save.owned.length}/{SKINS.length} owned</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.grid}>
@@ -79,9 +80,9 @@ export function Shop({ save, onChange, onClose, onBuy }: { save: Save; onChange:
 const styles = StyleSheet.create({
   root: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C.space },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10 },
-  back: { color: C.sky, fontSize: 16, fontWeight: '800', width: 64 },
+  titleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   title: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 26, letterSpacing: 2 },
-  count: { color: C.dim, fontFamily: F.mono, fontSize: 13, width: 64, textAlign: 'right' },
+  count: { color: C.dim, fontFamily: F.mono, fontSize: 12, textAlign: 'right' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: 14, paddingBottom: 16 },
   card: { width: '30%', alignItems: 'center', backgroundColor: C.panel, borderRadius: 16, paddingVertical: 14, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: C.sky },
