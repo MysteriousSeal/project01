@@ -1,3 +1,4 @@
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -18,6 +19,8 @@ import { HomeScreen } from './src/ui/screens/HomeScreen';
 import { SettingsScreen } from './src/ui/screens/SettingsScreen';
 import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
 import { C } from './src/ui/theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 type Screen = 'menu' | 'play' | 'over';
 type Outcome = { result: RunResult; report: RunReport };
@@ -45,6 +48,11 @@ export default function App() {
   useEffect(() => {
     if (save) writeSave(save);
   }, [save]);
+
+  const loaded = save !== null;
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync().catch(() => {});
+  }, [loaded]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
