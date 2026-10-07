@@ -81,7 +81,7 @@ export function Home({ save, onPlay, onShop, onClaim }: { save: Save; onPlay: ()
   const hero = Math.max(110, Math.min(width * 0.62, 250, height - 90 - bottomH - (compact ? 110 : 140)));
 
   return (
-    <Pressable style={styles.root} onPress={onPlay} accessibilityRole="button" accessibilityLabel="Play">
+    <View style={styles.root}>
       {STARS.map((s, i) => (
         <View key={i} style={[styles.abs, { left: s.x * width, top: s.y * height, width: s.s, height: s.s, borderRadius: 2, backgroundColor: '#fff', opacity: s.o }]} />
       ))}
@@ -119,10 +119,11 @@ export function Home({ save, onPlay, onShop, onClaim }: { save: Save; onPlay: ()
           </Pressable>
         )}
 
-        <Animated.View style={[styles.play, { transform: [{ scale }] }]}>
-          <Text style={styles.playTxt}>PLAY</Text>
-          <Text style={styles.playSub}>tap anywhere</Text>
-        </Animated.View>
+        <Pressable onPress={onPlay} hitSlop={8} accessibilityRole="button" accessibilityLabel="Play" style={({ pressed }) => [{ alignSelf: 'center' }, pressed && { transform: [{ scale: 0.95 }] }]}>
+          <Animated.View style={[styles.play, { transform: [{ scale }] }]}>
+            <Text style={styles.playTxt}>PLAY</Text>
+          </Animated.View>
+        </Pressable>
 
         <View style={styles.card}>
           <View style={styles.cardHead}>
@@ -150,7 +151,7 @@ export function Home({ save, onPlay, onShop, onClaim }: { save: Save; onPlay: ()
           </Pressable>
         )}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -175,9 +176,8 @@ const styles = StyleSheet.create({
   rVal: { color: C.text, fontFamily: F.mono, fontSize: 20, fontWeight: '700' },
   rLbl: { color: C.dim, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 2 },
   bottom: { paddingHorizontal: GUTTER, paddingBottom: 34, gap: GAP },
-  play: { alignSelf: 'center', alignItems: 'center', backgroundColor: C.mint, borderRadius: 40, paddingVertical: 12, width: 220, shadowColor: C.mint, shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 0 }, marginBottom: 4 },
+  play: { alignSelf: 'center', alignItems: 'center', backgroundColor: C.mint, borderRadius: 40, paddingVertical: 16, width: 220, shadowColor: C.mint, shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 0 }, marginBottom: 4 },
   playTxt: { color: C.space, fontFamily: F.display, fontWeight: '900', fontSize: 24, letterSpacing: 6, marginRight: -6 },
-  playSub: { color: '#0b102699', fontSize: 11, fontWeight: '700', marginTop: -2 },
   daily: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 16, backgroundColor: '#ffd34d14', borderWidth: 1.5, borderColor: '#ffd34d88' },
   dayBadge: { width: 46, height: 46, borderRadius: 12, backgroundColor: C.gold, alignItems: 'center', justifyContent: 'center' },
   dayNum: { color: C.space, fontFamily: F.mono, fontSize: 18, fontWeight: '800', lineHeight: 20 },
