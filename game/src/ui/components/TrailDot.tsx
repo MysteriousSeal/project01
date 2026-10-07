@@ -1,12 +1,13 @@
-import { View } from 'react-native';
-import { TrailStyle } from '../game/skins';
+import { View, ViewStyle } from 'react-native';
+import { TrailStyle } from '../../game/cosmetics';
+import { TUNING } from '../../game/engine';
 
-export const trailLength = (style: TrailStyle) => (style === 'comet' ? 18 : 12);
+export const trailLength = (style: TrailStyle) => (style === 'comet' ? TUNING.trailLength : 12);
 
 type Props = { style: TrailStyle; k: number; i: number; x: number; y: number; color: string; t: number; scale?: number };
 
 export function TrailDot({ style, k, i, x, y, color, t, scale = 1 }: Props) {
-  const box = (size: number, extra: object) => (
+  const box = (size: number, extra: ViewStyle) => (
     <View style={[{ position: 'absolute', left: x - size / 2, top: y - size / 2, width: size, height: size }, extra]} />
   );
   switch (style) {

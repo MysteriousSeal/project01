@@ -1,93 +1,103 @@
-import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { GameEvent } from './src/game/engine';
-import GameView, { RunResult } from './src/game/GameView';
-import { applyRun, claimDaily, ensureMissions, RunReport } from './src/game/progress';
-import { defaultSave, loadSave, Save, writeSave } from './src/game/save';
-import { skinById, trailById } from './src/game/skins';
+import { skinById, trailById } from './src/game/cosmetics';
+import { claimDaily } from './src/game/daily';
+import type { RunResult } from './src/game/engine';
+import { applyRun, ensureMissions, RunReport } from './src/game/progress';
+import { Save } from './src/game/save';
 import { modsFrom } from './src/game/upgrades';
-import { Home } from './src/ui/Home';
-import { GameOver } from './src/ui/Screens';
-import { Shop } from './src/ui/Shop';
+import { haptic, hapticForEvent } from './src/services/haptics';
+import { loadSave, writeSave } from './src/services/storage';
+import { C } from './src/ui/theme';
+import { GameOverScreen } from './src/ui/screens/GameOverScreen';
+import { GameScreen } from './src/ui/screens/GameScreen';
+import { HomeScreen } from './src/ui/screens/HomeScreen';
+import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
 
 type Screen = 'home' | 'play' | 'over';
+type Outcome = { result: RunResult; report: RunReport };
 
-const buzz = (e: GameEvent) => {
-  const H = Haptics;
-  const p =
-    e === 'perfect' ? H.impactAsync(H.ImpactFeedbackStyle.Medium)
-    : e === 'land' ? H.impactAsync(H.ImpactFeedbackStyle.Light)
-    : e === 'coin' ? H.selectionAsync()
-    : e === 'death' ? H.notificationAsync(H.NotificationFeedbackType.Error)
-    : e === 'milestone' || e === 'fever' || e === 'saved' ? H.impactAsync(H.ImpactFeedbackStyle.Heavy)
-    : e === 'best' || e === 'power' ? H.notificationAsync(H.NotificationFeedbackType.Success)
-    : null;
-  p?.catch(() => {});
-};
+const TUTORIAL_GAMES = 3;
 
 export default function App() {
-  const { width: W, height: H } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const [save, setSave] = useState<Save | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
+  const [shopOpen, setShopOpen] = useState(false);
   const [run, setRun] = useState(0);
-  const [save, setSave] = useState<Save>(() => ensureMissions(defaultSave()));
-  const [result, setResult] = useState<RunResult | null>(null);
-  const [report, setReport] = useState<RunReport | null>(null);
-  const [shop, setShop] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   useEffect(() => {
-    loadSave().then((s) => setSave(ensureMissions(s)));
+    let alive = true;
+    loadSave().then((s) => alive && setSave(ensureMissions(s)));
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
+    if (save) writeSave(save);
+  }, [save]);
+
+  useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (shop) {
-        setShop(false);
-        return true;
-      }
-      if (screen === 'over') {
-        setScreen('home');
-        return true;
-      }
-      return false;
+      if (shopOpen) setShopOpen(false);
+      else if (screen !== 'home') setScreen('home');
+      else return false;
+      return true;
     });
     return () => sub.remove();
-  }, [shop, screen]);
+  }, [shopOpen, screen]);
 
-  const commit = (s: Save) => {
-    setSave(s);
-    writeSave(s);
-  };
+  const mods = useMemo(() => modsFrom(save?.upgrades ?? {}), [save?.upgrades]);
+
+  if (!save) return <View style={styles.root} />;
 
   const play = () => {
     setRun((r) => r + 1);
     setScreen('play');
   };
 
-  const onEnd = (r: RunResult) => {
-    const rep = applyRun(save, r);
-    commit(rep.save);
-    if (rep.completed.length || rep.levelAfter > rep.levelBefore) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    setResult(r);
-    setReport(rep);
+  const finishRun = (result: RunResult) => {
+    const report = applyRun(save, result);
+    setSave(report.save);
+    setOutcome({ result, report });
     setScreen('over');
+    if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
   };
 
-  const openShop = () => setShop(true);
-  const skin = skinById(save.skin);
+  const claim = () => {
+    const next = claimDaily(save);
+    if (!next) return;
+    setSave(next);
+    haptic('success');
+  };
 
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      {screen !== 'home' && <GameView key={run} W={W} H={H} ballColor={skin.ball} trailColor={skin.trail} trailStyle={trailById(save.trail).id} mods={modsFrom(save.upgrades)} showHint={save.games < 3} bestIdx={save.bestPlanet} onEvent={buzz} onEnd={onEnd} />}
-      {screen === 'home' && <Home save={save} onPlay={play} onShop={openShop} onClaim={() => { commit(claimDaily(save)); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />}
-      {screen === 'over' && result && report && <GameOver result={result} report={report} onRetry={play} onHome={() => setScreen('home')} onShop={openShop} />}
-      {shop && <Shop save={save} onChange={commit} onClose={() => setShop(false)} onBuy={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})} />}
+      {screen !== 'home' && (
+        <GameScreen
+          key={run}
+          W={width}
+          H={height}
+          skin={skinById(save.skin)}
+          trailStyle={trailById(save.trail).id}
+          mods={mods}
+          showHint={save.games < TUTORIAL_GAMES}
+          bestIdx={save.bestPlanet}
+          onEvent={hapticForEvent}
+          onEnd={finishRun}
+        />
+      )}
+      {screen === 'home' && <HomeScreen save={save} onPlay={play} onShop={() => setShopOpen(true)} onClaim={claim} />}
+      {screen === 'over' && outcome && <GameOverScreen result={outcome.result} report={outcome.report} onRetry={play} onHome={() => setScreen('home')} onShop={() => setShopOpen(true)} />}
+      {shopOpen && <ShopScreen save={save} onChange={setSave} onClose={() => setShopOpen(false)} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0b1026' },
+  root: { flex: 1, backgroundColor: C.space },
 });

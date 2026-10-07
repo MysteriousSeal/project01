@@ -1,6 +1,7 @@
 export type Mods = { fuseBonus: number; magnetTime: number; feverTime: number; powerChance: number; startShield: boolean };
 
-export type Upgrade = { id: string; name: string; costs: number[]; effect: (lvl: number) => string };
+export type UpgradeId = 'sturdy' | 'magnet' | 'fever' | 'lucky' | 'shield';
+export type Upgrade = { id: UpgradeId; name: string; costs: number[]; effect: (lvl: number) => string };
 
 export const UPGRADES: Upgrade[] = [
   { id: 'sturdy', name: 'Sturdy planets', costs: [120, 300, 600, 1000], effect: (l) => (l ? `Planets hold +${(l * 0.3).toFixed(1)}s longer` : 'Planets collapse at normal speed') },
@@ -10,8 +11,11 @@ export const UPGRADES: Upgrade[] = [
   { id: 'shield', name: 'Starting shield', costs: [900], effect: (l) => (l ? 'Every run starts with a shield' : 'Runs start without a shield') },
 ];
 
-export function modsFrom(levels: Record<string, number>): Mods {
-  const l = (id: string) => levels[id] ?? 0;
+export const upgradeById = (id: string) => UPGRADES.find((u) => u.id === id);
+export const maxLevel = (id: string) => upgradeById(id)?.costs.length ?? 0;
+
+export function modsFrom(levels: Partial<Record<string, number>>): Mods {
+  const l = (id: UpgradeId) => Math.min(levels[id] ?? 0, maxLevel(id));
   return {
     fuseBonus: l('sturdy') * 0.3,
     magnetTime: 8 + l('magnet') * 2,
