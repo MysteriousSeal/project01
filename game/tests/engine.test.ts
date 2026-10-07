@@ -228,3 +228,17 @@ describe('aimAt helper sanity', () => {
     expect(s.by).toBeGreaterThan(planetOf(s, 1).y);
   });
 });
+
+describe('trail', () => {
+  it('stays visibly long while orbiting, with evenly spaced points', () => {
+    const s = newGame();
+    runFor(s, 3);
+    const pts = s.trail;
+    expect(pts).toHaveLength(TUNING.trailLength);
+    for (let i = 1; i < pts.length; i++) {
+      const gap = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      expect(gap).toBeGreaterThan(TUNING.trailSpacing * 0.8);
+      expect(gap).toBeLessThanOrEqual(TUNING.trailSpacing + 1e-6);
+    }
+  });
+});

@@ -38,7 +38,7 @@ export function TrailDot({ style, k, i, x, y, color, t, scale = 1 }: Props) {
     }
     default: {
       const s = (6 + k * 12) * scale;
-      return box(s, { borderRadius: s, backgroundColor: color, opacity: k * 0.5 });
+      return box(s, { borderRadius: s, backgroundColor: color, opacity: 0.1 + k * 0.6 });
     }
   }
 }

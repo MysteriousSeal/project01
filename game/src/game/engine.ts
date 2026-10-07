@@ -14,6 +14,7 @@ export const TUNING = {
   cameraAnchor: 0.65,
   cameraFollow: 4,
   trailLength: 18,
+  trailSpacing: 10,
   coinRadius: 26,
   powerRadius: 32,
   magnetRange: 190,
@@ -335,6 +336,21 @@ function collectPickups(s: State, dt: number) {
   }
 }
 
+function extendTrail(s: State) {
+  const last = s.trail[s.trail.length - 1];
+  if (!last) {
+    s.trail.push({ x: s.bx, y: s.by });
+    return;
+  }
+  const d = Math.hypot(s.bx - last.x, s.by - last.y);
+  const n = Math.min(Math.floor(d / TUNING.trailSpacing), TUNING.trailLength);
+  for (let i = 1; i <= n; i++) {
+    const k = (i * TUNING.trailSpacing) / d;
+    s.trail.push({ x: last.x + (s.bx - last.x) * k, y: last.y + (s.by - last.y) * k });
+  }
+  if (s.trail.length > TUNING.trailLength) s.trail.splice(0, s.trail.length - TUNING.trailLength);
+}
+
 function tickEffects(s: State, dt: number) {
   s.shake = Math.max(0, s.shake - dt * 40);
   s.shakeX = s.shake ? (s.rng() - 0.5) * s.shake : 0;
@@ -367,8 +383,7 @@ export function step(s: State, dt: number) {
   if (s.dead) return;
 
   collectPickups(s, dt);
-  s.trail.push({ x: s.bx, y: s.by });
-  if (s.trail.length > TUNING.trailLength) s.trail.shift();
+  extendTrail(s);
 
   const target = currentPlanet(s).y - s.H * TUNING.cameraAnchor;
   s.camY += (target - s.camY) * Math.min(1, dt * TUNING.cameraFollow);
