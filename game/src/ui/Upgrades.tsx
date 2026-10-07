@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Save } from '../game/save';
 import { UPGRADES } from '../game/upgrades';
-import { C, F, fmt } from './theme';
+import { C, F, fmt, GAP, GUTTER } from './theme';
 
 export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string, price: number) => void }) {
   return (
@@ -47,7 +47,7 @@ export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string, p
 }
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: 16, paddingBottom: 40, gap: 10 },
+  list: { paddingHorizontal: GUTTER, paddingBottom: 40, gap: GAP },
   intro: { color: C.dim, fontSize: 13, textAlign: 'center', marginBottom: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
   name: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 17 },

@@ -1,11 +1,11 @@
 import { ReactNode, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Save } from '../game/save';
 import { skinById, SKINS, trailById, TRAILS } from '../game/skins';
 import { BackButton } from './BackButton';
 import { OrbitHero, useReducedMotion } from './Home';
 import { TopBar } from './Screens';
-import { C, F, fmt } from './theme';
+import { C, F, fmt, GAP, GUTTER } from './theme';
 import { TrailDot } from './TrailDot';
 import { UpgradesTab } from './Upgrades';
 
@@ -106,6 +106,8 @@ function CosmeticTab({ items, owned, equipped, wallet, renderIcon, renderHero, o
   onBuy: (it: Item) => void;
   onEquip: (it: Item) => void;
 }) {
+  const { width } = useWindowDimensions();
+  const cardW = Math.floor((width - GUTTER * 2 - GAP * 2) / 3);
   const [selId, setSelId] = useState(equipped);
   const sel = items.find((k) => k.id === selId) ?? items[0];
   const has = owned.includes(sel.id);
@@ -119,7 +121,7 @@ function CosmeticTab({ items, owned, equipped, wallet, renderIcon, renderHero, o
           const o = owned.includes(k.id);
           const e = equipped === k.id;
           return (
-            <Pressable key={k.id} onPress={() => setSelId(k.id)} style={[styles.card, k.id === sel.id && styles.selected]} accessibilityRole="button" accessibilityState={{ selected: k.id === sel.id }} accessibilityLabel={`${k.name}${o ? ', owned' : `, ${k.price} coins`}`}>
+            <Pressable key={k.id} onPress={() => setSelId(k.id)} style={[styles.card, { width: cardW }, k.id === sel.id && styles.selected]} accessibilityRole="button" accessibilityState={{ selected: k.id === sel.id }} accessibilityLabel={`${k.name}${o ? ', owned' : `, ${k.price} coins`}`}>
               {renderIcon(k)}
               <Text style={styles.name}>{k.name}</Text>
               <Text style={[styles.tag, { color: e ? C.mint : o ? C.dim : C.gold }]}>{e ? 'Equipped' : o ? 'Owned' : `● ${fmt(k.price)}`}</Text>
@@ -156,24 +158,24 @@ function CosmeticTab({ items, owned, equipped, wallet, renderIcon, renderHero, o
 
 export const styles = StyleSheet.create({
   root: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C.space },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 8 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: GUTTER, paddingTop: 8, paddingBottom: 20 },
   titleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   title: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 26, letterSpacing: 2 },
   count: { color: C.dim, fontFamily: F.mono, fontSize: 12, textAlign: 'right' },
-  tabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, padding: 4, borderRadius: 16, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
+  tabs: { flexDirection: 'row', marginHorizontal: GUTTER, marginBottom: 12, padding: 4, borderRadius: 16, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 12 },
   tabOn: { backgroundColor: C.sky },
   tabTxt: { color: C.dim, fontWeight: '800', fontSize: 14 },
   tabTxtOn: { color: C.space, fontWeight: '900' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: 14, paddingBottom: 16 },
-  card: { width: '30%', alignItems: 'center', backgroundColor: C.panel, borderRadius: 16, paddingVertical: 14, borderWidth: 2, borderColor: 'transparent' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, paddingHorizontal: GUTTER, paddingBottom: 16 },
+  card: { alignItems: 'center', backgroundColor: C.panel, borderRadius: 16, paddingVertical: 14, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: C.sky },
   preview: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 30 },
   trailIcon: { width: 70, height: 30 },
   dot: { borderRadius: 20 },
   name: { color: C.text, fontWeight: '800', marginTop: 8, fontSize: 13 },
   tag: { fontFamily: F.mono, fontWeight: '700', marginTop: 3, fontSize: 12 },
-  panel: { flexDirection: 'row', alignItems: 'center', gap: 14, margin: 14, marginBottom: 34, padding: 14, borderRadius: 20, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
+  panel: { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: GUTTER, marginTop: 6, marginBottom: 34, padding: 14, borderRadius: 20, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
   selName: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 22 },
   selSub: { color: C.dim, fontSize: 13, marginTop: 2 },
   btn: { borderRadius: 14, paddingVertical: 13, alignItems: 'center' },

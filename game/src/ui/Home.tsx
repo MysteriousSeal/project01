@@ -5,7 +5,7 @@ import { Save } from '../game/save';
 import { nextSkin, skinById, trailById, TrailStyle } from '../game/skins';
 import { TrailDot, trailLength } from './TrailDot';
 import { TopBar } from './Screens';
-import { C, F, fmt } from './theme';
+import { C, F, fmt, GAP, GUTTER } from './theme';
 
 const STARS = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 2 + 0.8, o: Math.random() * 0.6 + 0.2 }));
 
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   sep: { width: 1, height: 26, backgroundColor: C.line },
   rVal: { color: C.text, fontFamily: F.mono, fontSize: 20, fontWeight: '700' },
   rLbl: { color: C.dim, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 2 },
-  bottom: { paddingHorizontal: 18, paddingBottom: 34, gap: 10 },
+  bottom: { paddingHorizontal: GUTTER, paddingBottom: 34, gap: GAP },
   play: { alignSelf: 'center', alignItems: 'center', backgroundColor: C.mint, borderRadius: 40, paddingVertical: 12, width: 220, shadowColor: C.mint, shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 0 }, marginBottom: 4 },
   playTxt: { color: C.space, fontFamily: F.display, fontWeight: '900', fontSize: 24, letterSpacing: 6, marginRight: -6 },
   playSub: { color: '#0b102699', fontSize: 11, fontWeight: '700', marginTop: -2 },

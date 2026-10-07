@@ -3,8 +3,7 @@ import { RunResult } from '../game/GameView';
 import { levelInfo, missionLabel, RunReport } from '../game/progress';
 import { Mission, Save } from '../game/save';
 import { nextSkin } from '../game/skins';
-import { BackButton } from './BackButton';
-import { F, fmt } from './theme';
+import { F, fmt, GUTTER } from './theme';
 
 export function GameOver({ result, report, onRetry, onHome, onShop }: { result: RunResult; report: RunReport; onRetry: () => void; onHome: () => void; onShop: () => void }) {
   const { height } = useWindowDimensions();
@@ -32,10 +31,12 @@ export function GameOver({ result, report, onRetry, onHome, onShop }: { result: 
         <Missions missions={report.shown} compact={compact} />
       </View>
       <View style={styles.overBottom}>
-        <Pressable style={styles.retryBtn} onPress={onRetry}>
+        <Pressable style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]} onPress={onRetry} accessibilityRole="button">
           <Text style={styles.playTxt}>PLAY AGAIN</Text>
         </Pressable>
-        <BackButton label="Home" onPress={onHome} style={{ alignSelf: 'center', marginTop: 14 }} />
+        <Pressable style={({ pressed }) => [styles.homeBtn, pressed && styles.pressed]} onPress={onHome} accessibilityRole="button">
+          <Text style={styles.homeTxt}>HOME</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -107,12 +108,15 @@ function Stat({ label, value, color, compact }: { label: string; value: string; 
 }
 
 export const styles = StyleSheet.create({
-  topBarInline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', alignSelf: 'stretch', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 8 },
+  topBarInline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', alignSelf: 'stretch', paddingHorizontal: GUTTER, paddingTop: 60, paddingBottom: 8 },
   overRoot: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#0b1026ee', alignItems: 'center' },
-  overMid: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 20 },
+  overMid: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: GUTTER },
   badges: { flexDirection: 'row', gap: 8, minHeight: 28, alignItems: 'center' },
   badge: { color: '#0b1026', fontWeight: '900', fontSize: 14, letterSpacing: 1, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, overflow: 'hidden' },
-  retryBtn: { backgroundColor: '#7dffb2', paddingHorizontal: 44, paddingVertical: 16, borderRadius: 40 },
+  retryBtn: { width: 260, alignItems: 'center', backgroundColor: '#7dffb2', paddingVertical: 16, borderRadius: 40 },
+  homeBtn: { width: 260, alignItems: 'center', marginTop: 12, paddingVertical: 14, borderRadius: 40, backgroundColor: '#151b3d', borderWidth: 2, borderColor: '#9ad7ff' },
+  homeTxt: { color: '#9ad7ff', fontSize: 18, fontWeight: '900', letterSpacing: 2 },
+  pressed: { transform: [{ scale: 0.96 }], opacity: 0.9 },
   missionDone: { borderWidth: 1.5, borderColor: '#7dffb2' },
   overBottom: { alignItems: 'center', paddingTop: 6, paddingBottom: 30 },
   lvlBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },

@@ -17,4 +17,7 @@ export const F = {
   mono: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
 };
 
+export const GUTTER = 16;
+export const GAP = 10;
+
 export const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
