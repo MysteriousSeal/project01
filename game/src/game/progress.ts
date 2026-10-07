@@ -55,6 +55,7 @@ export type RunReport = {
   levelAfter: number;
   levelReward: number;
   completed: Mission[];
+  shown: Mission[];
   newBest: boolean;
 };
 
@@ -63,6 +64,7 @@ export function applyRun(save: Save, r: RunResult): RunReport {
   const xpGained = r.score + r.perfects * 2 + r.coins;
   const completed: Mission[] = [];
   const kept: Mission[] = [];
+  const shown: Mission[] = [];
   for (const m of save.missions) {
     const val =
       m.kind === 'score' ? r.score
@@ -74,6 +76,7 @@ export function applyRun(save: Save, r: RunResult): RunReport {
     const progress = m.kind === 'games' || m.kind === 'totalScore' ? val : Math.max(m.progress, val);
     const nm = { ...m, progress: Math.min(progress, m.target) };
     (nm.progress >= m.target ? completed : kept).push(nm);
+    shown.push(nm);
   }
   const xp = save.xp + xpGained;
   const levelAfter = levelInfo(xp).lvl;
@@ -84,9 +87,26 @@ export function applyRun(save: Save, r: RunResult): RunReport {
     ...save,
     xp,
     best: Math.max(save.best, r.score),
+    bestPlanet: Math.max(save.bestPlanet, r.planets),
     wallet: save.wallet + r.coins + missionCoins + levelReward,
     games: save.games + 1,
     missions: kept,
   });
-  return { save: next, xpGained, levelBefore, levelAfter, levelReward, completed, newBest: r.score > save.best && r.score > 0 };
+  return { save: next, xpGained, levelBefore, levelAfter, levelReward, completed, shown, newBest: r.score > save.best && r.score > 0 };
+}
+
+const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+export function dailyStatus(save: Save) {
+  const now = new Date();
+  const today = dayKey(now);
+  const yesterday = dayKey(new Date(now.getTime() - 86400000));
+  const streak = save.lastDaily === yesterday ? save.streak + 1 : 1;
+  return { available: save.lastDaily !== today, streak, reward: 15 + Math.min(streak, 7) * 10, today };
+}
+
+export function claimDaily(save: Save): Save {
+  const d = dailyStatus(save);
+  if (!d.available) return save;
+  return { ...save, lastDaily: d.today, streak: d.streak, wallet: save.wallet + d.reward };
 }

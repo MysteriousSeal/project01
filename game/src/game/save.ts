@@ -11,11 +11,14 @@ export type Save = {
   owned: string[];
   skin: string;
   missions: Mission[];
+  bestPlanet: number;
+  lastDaily: string;
+  streak: number;
 };
 
 const KEY = 'orbit-hop-save-v1';
 
-export const defaultSave = (): Save => ({ best: 0, wallet: 0, xp: 0, games: 0, owned: ['classic'], skin: 'classic', missions: [] });
+export const defaultSave = (): Save => ({ best: 0, wallet: 0, xp: 0, games: 0, owned: ['classic'], skin: 'classic', missions: [], bestPlanet: 0, lastDaily: '', streak: 0 });
 
 export async function loadSave(): Promise<Save> {
   try {

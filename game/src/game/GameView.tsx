@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { createState, GameEvent, State, step, tap } from './engine';
+import { createState, FEVER_TIME, GameEvent, MAGNET_TIME, State, step, tap, zoneOf } from './engine';
 
-export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number };
+export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number };
 
 type Props = {
   W: number;
@@ -10,14 +10,15 @@ type Props = {
   ballColor: string;
   trailColor: string;
   showHint?: boolean;
+  bestIdx?: number;
   onEvent?: (e: GameEvent) => void;
   onEnd: (r: RunResult) => void;
 };
 
 const STARS = Array.from({ length: 60 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 2 + 1, d: Math.random() * 0.4 + 0.1 }));
 
-export default function GameView({ W, H, ballColor, trailColor, showHint, onEvent, onEnd }: Props) {
-  const s = useRef<State>(createState(W, H)).current;
+export default function GameView({ W, H, ballColor, trailColor, showHint, bestIdx = 0, onEvent, onEnd }: Props) {
+  const s = useRef<State>(createState(W, H, bestIdx)).current;
   const [, setFrame] = useState(0);
   const ended = useRef(false);
   const cb = useRef({ onEvent, onEnd });
@@ -37,7 +38,7 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
         deadFor += dt;
         if (deadFor > 0.7) {
           ended.current = true;
-          cb.current.onEnd({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo });
+          cb.current.onEnd({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur });
         }
       }
       setFrame((f) => f + 1);
@@ -51,10 +52,16 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
   const sy = s.shake ? (Math.random() - 0.5) * s.shake : 0;
   const cy = s.camY;
   const stars = useMemo(() => STARS, []);
+  const fever = s.fever > 0;
+  const hueT = (s.t * 240) % 360;
+  const ball = fever ? `hsl(${hueT},100%,70%)` : ballColor;
+  const trail = fever ? `hsl(${(hueT + 60) % 360},100%,60%)` : trailColor;
+  const bestPlanet = s.bestIdx > 0 ? s.planets.find((p) => p.idx === s.bestIdx) : undefined;
 
   return (
     <Pressable style={StyleSheet.absoluteFill} onPressIn={() => tap(s)}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0b1026' }]}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: zoneOf(s.cur).bg }]}>
+        {fever && <View style={[StyleSheet.absoluteFill, { backgroundColor: '#ff70a6', opacity: 0.08 + 0.05 * Math.sin(s.t * 12) }]} />}
         {stars.map((st, i) => {
           const y = (((st.y * H - cy * st.d) % H) + H) % H;
           return <View key={i} style={[styles.star, { left: st.x * W, top: y, width: st.s, height: st.s, opacity: st.d * 2 }]} />;
@@ -62,6 +69,12 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
       </View>
 
       <View style={[StyleSheet.absoluteFill, { transform: [{ translateX: sx }, { translateY: sy }] }]}>
+        {bestPlanet && (
+          <View pointerEvents="none" style={[styles.bestLine, { top: bestPlanet.y - cy }]}>
+            <Text style={styles.bestTxt}>BEST</Text>
+          </View>
+        )}
+
         {s.planets.map((p) => {
           const active = p.idx === s.cur;
           const k = active ? Math.max(0.15, p.fuse / p.fuseMax) : 1;
@@ -84,11 +97,19 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
           ),
         )}
 
+        {s.powerups.map((u, i) =>
+          u.taken ? null : (
+            <View key={`pw${i}`} style={[styles.power, { left: u.x - 16, top: u.y - cy - 16, borderColor: u.kind === 'shield' ? '#4cc9f0' : '#ff70a6', transform: [{ scale: 1 + 0.12 * Math.sin(s.t * 6 + i) }] }]}>
+              <Text style={[styles.powerTxt, { color: u.kind === 'shield' ? '#4cc9f0' : '#ff70a6' }]}>{u.kind === 'shield' ? 'S' : 'M'}</Text>
+            </View>
+          ),
+        )}
+
         {!s.dead &&
           s.trail.map((t, i) => {
             const k = (i + 1) / s.trail.length;
             const r = 3 + k * 6;
-            return <View key={`t${i}`} style={[styles.circle, { left: t.x - r, top: t.y - cy - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: trailColor, opacity: k * 0.5 }]} />;
+            return <View key={`t${i}`} style={[styles.circle, { left: t.x - r, top: t.y - cy - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: trail, opacity: k * (fever ? 0.8 : 0.5) }]} />;
           })}
 
         {!s.dead && !s.flying &&
@@ -100,7 +121,9 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
             return <View key={`a${i}`} style={[styles.circle, { left: x - 2.5, top: y - 2.5, width: 5, height: 5, borderRadius: 3, backgroundColor: ballColor, opacity: 0.6 - i * 0.12 }]} />;
           })}
 
-        {!s.dead && <View style={[styles.ball, { left: s.bx - 11, top: s.by - cy - 11, backgroundColor: ballColor, shadowColor: ballColor }]} />}
+        {!s.dead && s.shield && <View style={[styles.shield, { left: s.bx - 20, top: s.by - cy - 20 }]} />}
+        {!s.dead && s.magnet > 0 && <View style={[styles.magnetRing, { left: s.bx - 40, top: s.by - cy - 40, opacity: 0.25 + 0.15 * Math.sin(s.t * 10) }]} />}
+        {!s.dead && <View style={[styles.ball, { left: s.bx - 11, top: s.by - cy - 11, backgroundColor: ball, shadowColor: ball }]} />}
 
         {s.particles.map((q, i) => {
           const k = q.life / q.max;
@@ -117,7 +140,10 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
       <View style={styles.hud} pointerEvents="none">
         <Text style={styles.score}>{s.score}</Text>
         <Text style={styles.coins}>● {s.coinsRun}</Text>
-        {s.combo > 1 && <Text style={styles.combo}>COMBO x{s.combo}</Text>}
+        {s.combo > 1 && <Text style={styles.combo}>COMBO x{s.combo}{!fever && s.combo % 5 === 4 ? '  · next = FEVER' : ''}</Text>}
+        {fever && <Timer label="FEVER  ×2 ●" k={s.fever / FEVER_TIME} color="#ff70a6" />}
+        {s.magnet > 0 && <Timer label="MAGNET" k={s.magnet / MAGNET_TIME} color="#ff70a6" />}
+        {s.shield && <Text style={[styles.combo, { color: '#4cc9f0' }]}>SHIELD ON</Text>}
       </View>
       {showHint && s.score === 0 && !s.dead && (
         <View style={styles.hint} pointerEvents="none">
@@ -126,6 +152,17 @@ export default function GameView({ W, H, ballColor, trailColor, showHint, onEven
         </View>
       )}
     </Pressable>
+  );
+}
+
+function Timer({ label, k, color }: { label: string; k: number; color: string }) {
+  return (
+    <View style={styles.timer}>
+      <Text style={[styles.timerTxt, { color }]}>{label}</Text>
+      <View style={styles.timerBar}>
+        <View style={{ height: 5, width: `${k * 100}%`, backgroundColor: color }} />
+      </View>
+    </View>
   );
 }
 
@@ -140,6 +177,15 @@ const styles = StyleSheet.create({
   score: { color: '#fff', fontSize: 64, fontWeight: '900' },
   coins: { color: '#ffd34d', fontSize: 18, fontWeight: '800', marginTop: -4 },
   combo: { color: '#7dffb2', fontSize: 16, fontWeight: '900', marginTop: 6 },
+  bestLine: { position: 'absolute', left: 0, right: 0, height: 0, borderTopWidth: 2, borderColor: '#ffd34d88', borderStyle: 'dashed' },
+  bestTxt: { position: 'absolute', right: 10, top: -22, color: '#ffd34d', fontWeight: '900', fontSize: 13, letterSpacing: 2 },
+  power: { position: 'absolute', width: 32, height: 32, borderRadius: 16, borderWidth: 3, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff15' },
+  powerTxt: { fontWeight: '900', fontSize: 15 },
+  shield: { position: 'absolute', width: 40, height: 40, borderRadius: 20, borderWidth: 2.5, borderColor: '#4cc9f0', backgroundColor: '#4cc9f022' },
+  magnetRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: '#ff70a6' },
+  timer: { alignItems: 'center', marginTop: 6 },
+  timerTxt: { fontWeight: '900', fontSize: 14, letterSpacing: 1 },
+  timerBar: { width: 120, height: 5, borderRadius: 3, backgroundColor: '#ffffff22', overflow: 'hidden', marginTop: 3 },
   hint: { position: 'absolute', bottom: 90, left: 0, right: 0, alignItems: 'center' },
   hintTxt: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
   hintSub: { color: '#7dffb2', fontSize: 15, fontWeight: '700', marginTop: 8 },
