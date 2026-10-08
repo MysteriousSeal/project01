@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { diffLedger } from '../../src/game/meta/ledger';
 import { applyRun, shortOfBest } from '../../src/game/meta/progress';
 import { normalizeSave } from '../../src/game/meta/save';
-import { addRunStats, awardTrophies, emptyStats, TROPHIES, TROPHY_COUNT, TROPHY_TIERS, trophiesEarned, trophyProgress } from '../../src/game/meta/trophies';
+import { addRunStats, awardTrophies, emptyStats, TROPHIES, TROPHY_COUNT, TROPHY_TIERS, trophiesDue, trophiesEarned, trophyProgress } from '../../src/game/meta/trophies';
 import { seededRng } from '../../src/game/sim/rng';
 import { result, saveWith } from '../helpers';
 
@@ -62,7 +62,11 @@ describe('trophies', () => {
     const trophyCoins = report.trophies.reduce((a, u) => a + u.reward, 0);
     expect(report.save.wallet).toBe(r.coins + report.levelReward + report.completed.reduce((a, m) => a + m.reward, 0) + trophyCoins);
     const entries = diffLedger(save, report.save, { source: 'run', runId: 'r1' }, () => 'e1');
-    expect(entries).toEqual([expect.objectContaining({ kind: 'earn', source: 'run', amount: report.save.wallet })]);
+    expect(entries).toEqual([
+      expect.objectContaining({ kind: 'earn', source: 'run', amount: report.save.wallet - trophyCoins, wallet_after: report.save.wallet - trophyCoins }),
+      expect.objectContaining({ kind: 'earn', source: 'trophy', amount: trophyCoins, wallet_after: report.save.wallet }),
+    ]);
+    expect(entries[1].detail.trophies).toEqual(report.trophies.map((u) => ({ id: u.trophy.id, tier: u.tier })));
   });
 
   it('count daily challenge runs too', () => {
@@ -76,6 +80,30 @@ describe('trophies', () => {
     const report = applyRun(veteran, result({ score: 1, planets: 1 }), { rng: seededRng(1) });
     const extra = report.save.wallet - 0;
     expect(extra).toBeLessThanOrEqual(2000);
+  });
+});
+
+describe('trophies reached outside a run', () => {
+  it('are due when records already meet a tier', () => {
+    expect(trophiesDue(saveWith({ bestPlanet: 20, games: 10 }))).toBe(true);
+    expect(trophiesDue(saveWith({ bestPlanet: 20, games: 10, trophies: { explorer: 1, regular: 1 } }))).toBe(false);
+    expect(trophiesDue(saveWith())).toBe(false);
+  });
+
+  it('pay with a single trophy ledger entry', () => {
+    const prev = saveWith({ bestPlanet: 20, games: 10, wallet: 246 });
+    const next = awardTrophies(prev).save;
+    expect(next.wallet).toBe(246 + 2 * TROPHY_TIERS[0].reward);
+    expect(diffLedger(prev, next, { source: 'trophy' }, () => 't1')).toEqual([
+      { id: 't1', kind: 'earn', source: 'trophy', amount: 50, wallet_after: 296, detail: { trophies: [{ id: 'explorer', tier: 1 }, { id: 'regular', tier: 1 }] } },
+    ]);
+  });
+
+  it('do not change other ledger entries', () => {
+    const prev = saveWith({ wallet: 100, trophies: { regular: 1 } });
+    expect(diffLedger(prev, { ...prev, wallet: 130 }, { source: 'daily_reward' }, () => 'd')).toEqual([
+      expect.objectContaining({ source: 'daily_reward', amount: 30, wallet_after: 130 }),
+    ]);
   });
 });
 

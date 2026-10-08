@@ -69,3 +69,22 @@ set role authenticated;
 select tests.login(:carol);
 select tests.check((select count(*) = 0 from public.best_scores), 'best scores are hidden behind the leaderboard function');
 reset role;
+
+-- Trophy rewards are checked against the catalog and paid once per tier.
+set role authenticated;
+select tests.login(:carol);
+insert into public.ledger (id, user_id, kind, source, amount, wallet_after, detail) values
+  ('40000000-0000-4000-8000-000000000001', :carol, 'earn', 'trophy', 100, 100, '{"trophies": [{"id": "explorer", "tier": 1}, {"id": "explorer", "tier": 2}]}'),
+  ('40000000-0000-4000-8000-000000000002', :carol, 'earn', 'trophy', 25, 125, '{"trophies": [{"id": "explorer", "tier": 1}]}'),
+  ('40000000-0000-4000-8000-000000000003', :carol, 'earn', 'trophy', 999, 999, '{"trophies": [{"id": "regular", "tier": 1}]}'),
+  ('40000000-0000-4000-8000-000000000004', :carol, 'earn', 'trophy', 25, 25, '{"trophies": [{"id": "regular", "tier": 4}]}'),
+  ('40000000-0000-4000-8000-000000000005', :carol, 'earn', 'trophy', 50, 50, '{"trophies": [{"id": "hopper", "tier": 1}, {"id": "hopper", "tier": 1}]}'),
+  ('40000000-0000-4000-8000-000000000006', :carol, 'earn', 'trophy', 25, 25, '{}'),
+  ('40000000-0000-4000-8000-000000000007', :carol, 'earn', 'trophy', 200, 200, '{"trophies": [{"id": "comboKing", "tier": 3}]}');
+reset role;
+select tests.check(
+  (select array_agg(right(id::text, 1) order by id) = array['1', '7'] from public.ledger where source = 'trophy' and not suspicious),
+  'valid trophy rewards pass; repeats, wrong amounts, unknown tiers, duplicates and missing lists are flagged'
+);
+select tests.check((select note = 'trophy tier already rewarded' from public.ledger where id = '40000000-0000-4000-8000-000000000002'), 'repeat tiers explain why');
+select tests.check((select value = 200 from public.catalog_settings where key = 'trophy_tier_3'), 'trophy rewards are in the catalog');

@@ -20,6 +20,7 @@ import { AccountSection } from './src/ui/screens/AccountSection';
 import { telemetry, useTelemetry } from './src/services/hooks/useTelemetry';
 import { ChangeReason, diffLedger, openingEntry } from './src/game/meta/ledger';
 import { runRow, uuid } from './src/game/meta/stats';
+import { awardTrophies, trophiesDue, trophiesEarned } from './src/game/meta/trophies';
 import { TabBar, TabId } from './src/ui/components/TabBar';
 import { DailyScreen } from './src/ui/screens/DailyScreen';
 import { GameOverScreen } from './src/ui/screens/GameOverScreen';
@@ -62,6 +63,7 @@ export default function App() {
   const [save, setSave] = useState<Save | null>(null);
   const [tab, setTab] = useState<TabId>('home');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newTrophies, setNewTrophies] = useState(false);
   const [run, setRun] = useState<Run | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
@@ -91,6 +93,18 @@ export default function App() {
     if (needsOpening) startLedger();
   }, [needsOpening]);
 
+  // Records reached before trophies existed, or outside a run, are rewarded as soon as the ledger is ready.
+  const ledgerReady = save !== null && (save.ledgerStarted || telemetry === null);
+  const due = ledgerReady && trophiesDue(save);
+  const catchUpTrophies = useEffectEvent(() => {
+    if (!save) return;
+    update(save, { source: 'trophy' });
+    haptic('success');
+  });
+  useEffect(() => {
+    if (due) catchUpTrophies();
+  }, [due]);
+
   const loaded = save !== null;
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
@@ -108,15 +122,19 @@ export default function App() {
     return () => sub.remove();
   }, [inMenu, tab, settingsOpen]);
 
-  if (!save) return <View style={styles.root} />;
+  function update(next: Save, reason: ChangeReason = { source: 'other' }) {
+    if (!save) return;
+    const settled = awardTrophies(next).save;
+    void telemetry?.logLedger(diffLedger(save, settled, reason, uuid));
+    if (trophiesEarned(settled) > trophiesEarned(save) && tab !== 'trophies') setNewTrophies(true);
+    setSave(touch(settled));
+  }
 
-  const update = (next: Save, reason: ChangeReason = { source: 'other' }) => {
-    void telemetry?.logLedger(diffLedger(save, next, reason, uuid));
-    setSave(touch(next));
-  };
+  if (!save) return <View style={styles.root} />;
 
   const goTab = (t: TabId) => {
     setTab(t);
+    if (t === 'trophies') setNewTrophies(false);
     setSettingsOpen(false);
     setRun(null);
     setOutcome(null);
@@ -181,7 +199,7 @@ export default function App() {
               />
             )}
           </View>
-          <TabBar tab={tab} onChange={goTab} badges={{ daily: dailyBadge }} />
+          <TabBar tab={tab} onChange={goTab} badges={{ daily: dailyBadge, trophies: newTrophies }} />
         </>
       )}
       {run && outcome && (

@@ -59,6 +59,9 @@ export const trophiesEarned = (save: Save) => TROPHIES.reduce((a, t) => a + tier
 /** Tiers whose targets the save already meets. */
 export const reachedTier = (t: Trophy, save: Save) => t.targets.filter((n) => t.value(save) >= n).length;
 
+/** True when the save meets a tier it has not been rewarded for yet. */
+export const trophiesDue = (save: Save) => TROPHIES.some((t) => reachedTier(t, save) > tierOf(save, t.id));
+
 export type TrophyUnlock = { trophy: Trophy; tier: number; reward: number };
 
 /** Grants every newly reached tier and its coins. Returns the same save when nothing changed. */

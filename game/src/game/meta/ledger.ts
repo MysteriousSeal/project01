@@ -1,11 +1,12 @@
 import { BOOSTS } from './boosts';
 import { CATALOG, COSMETIC_KINDS } from './cosmetics';
 import { BUNDLES } from './offers';
+import { tierOf, TROPHIES, TROPHY_TIERS } from './trophies';
 import type { Save } from './save';
 import type { OfferItem } from './shop';
 import { UPGRADES } from './upgrades';
 
-export type LedgerSource = 'opening' | 'run' | 'daily_reward' | 'dev' | 'cosmetic' | 'deal' | 'bundle' | 'box' | 'boost' | 'upgrade';
+export type LedgerSource = 'opening' | 'run' | 'daily_reward' | 'trophy' | 'dev' | 'cosmetic' | 'deal' | 'bundle' | 'box' | 'boost' | 'upgrade';
 
 export type LedgerEntry = {
   id: string;
@@ -16,7 +17,7 @@ export type LedgerEntry = {
   detail: Record<string, unknown>;
 };
 
-export type ChangeReason = { source: 'run'; runId: string } | { source: 'daily_reward' } | { source: 'dev' } | { source: 'shop' } | { source: 'other' };
+export type ChangeReason = { source: 'run'; runId: string } | { source: 'daily_reward' } | { source: 'trophy' } | { source: 'dev' } | { source: 'shop' } | { source: 'other' };
 
 const gainedItems = (prev: Save, next: Save): OfferItem[] =>
   COSMETIC_KINDS.flatMap((kind) => {
@@ -49,10 +50,28 @@ function spendEntry(prev: Save, next: Save, amount: number): Pick<LedgerEntry, '
   return { source: 'cosmetic', detail: { items: [], unexplained: amount } };
 }
 
+export type TrophyTier = { id: string; tier: number };
+
+const gainedTrophies = (prev: Save, next: Save): TrophyTier[] =>
+  TROPHIES.flatMap((t) => {
+    const out: TrophyTier[] = [];
+    for (let tier = tierOf(prev, t.id) + 1; tier <= tierOf(next, t.id); tier++) out.push({ id: t.id, tier });
+    return out;
+  });
+
+/** Ledger entries for a save change. Trophy coins always get their own entry so the server can check them. */
 export function diffLedger(prev: Save, next: Save, reason: ChangeReason, newId: () => string): LedgerEntry[] {
-  const delta = next.wallet - prev.wallet;
+  const trophies = gainedTrophies(prev, next);
+  const trophyCoins = trophies.reduce((a, t) => a + TROPHY_TIERS[t.tier - 1].reward, 0);
+  const rest = walletEntries(prev, next, next.wallet - trophyCoins, reason, newId);
+  if (!trophyCoins) return rest;
+  return [...rest, { id: newId(), kind: 'earn', source: 'trophy', amount: trophyCoins, wallet_after: next.wallet, detail: { trophies } }];
+}
+
+function walletEntries(prev: Save, next: Save, walletAfter: number, reason: ChangeReason, newId: () => string): LedgerEntry[] {
+  const delta = walletAfter - prev.wallet;
   if (delta === 0) return [];
-  const base = { id: newId(), wallet_after: next.wallet };
+  const base = { id: newId(), wallet_after: walletAfter };
   if (delta < 0) return [{ ...base, kind: 'spend', amount: -delta, ...spendEntry(prev, next, -delta) }];
   switch (reason.source) {
     case 'run':
