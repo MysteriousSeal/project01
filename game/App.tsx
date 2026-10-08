@@ -9,8 +9,10 @@ import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
 import { Save } from './src/game/meta/save';
 import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
 import { progressSummary, recommendedSource, SaveSource, touch } from './src/game/meta/sync';
-import type { RunResult } from './src/game/sim/engine';
+import { reviveOffer } from './src/game/meta/revive';
+import type { GameEvent, RunResult } from './src/game/sim/engine';
 import { haptic, hapticForEvent } from './src/services/device/haptics';
+import { playSound, preloadSounds, soundForEvent } from './src/services/device/sound';
 import { loadSave, writeSave } from './src/services/device/storage';
 import { supabaseAccount } from './src/services/backend/accountApi';
 import { supabase } from './src/services/backend/client';
@@ -55,7 +57,8 @@ const chooseProgress = (local: Save, remote: Save) =>
     );
   });
 
-type Run = { id: number; config: RunConfig };
+/** `runId` is the server id shared by the run row and any revive paid during it. */
+type Run = { id: number; runId: string; config: RunConfig };
 type Outcome = { result: RunResult; report: RunReport };
 
 export default function App() {
@@ -110,6 +113,11 @@ export default function App() {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
   }, [loaded]);
 
+  const soundOn = save?.settings.sound ?? false;
+  useEffect(() => {
+    if (soundOn) preloadSounds();
+  }, [soundOn]);
+
   const inMenu = run === null;
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -145,7 +153,7 @@ export default function App() {
     if (!started) return;
     update(started.save);
     setOutcome(null);
-    setRun((r) => ({ id: (r?.id ?? 0) + 1, config: started.config }));
+    setRun((r) => ({ id: (r?.id ?? 0) + 1, runId: uuid(), config: started.config }));
   };
 
   const retry = () => {
@@ -157,11 +165,25 @@ export default function App() {
   const finishRun = (result: RunResult) => {
     if (!run) return;
     const report = applyRun(save, result, { mode: run.config.mode, challenge: run.config.challenge?.id });
-    const runId = uuid();
+    const { runId } = run;
     void telemetry?.logRun(runRow(runId, run.config, result, save.challenges.day || null));
     update(report.save, { source: 'run', runId });
     setOutcome({ result, report });
     if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
+  };
+
+  const onGameEvent = (e: GameEvent, combo: number) => {
+    hapticForEvent(e);
+    const sound = save.settings.sound && soundForEvent(e, combo);
+    if (sound) playSound(sound);
+  };
+
+  const offerRevive = (used: number) => (run ? reviveOffer(run.config.mode, used, save.wallet) : null);
+
+  const payRevive = (used: number) => {
+    const price = offerRevive(used);
+    if (!run || price === null) return;
+    update({ ...save, wallet: save.wallet - price }, { source: 'revive', runId: run.runId, count: used + 1 });
   };
 
   const claim = () => {
@@ -177,7 +199,7 @@ export default function App() {
     <View style={styles.root}>
       <StatusBar style="light" />
       {run && !outcome && (
-        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} theme={themeById(save.theme)} config={run.config} onEvent={hapticForEvent} onEnd={finishRun} />
+        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} theme={themeById(save.theme)} config={run.config} onEvent={onGameEvent} onEnd={finishRun} reviveOffer={offerRevive} onRevive={payRevive} wallet={save.wallet} />
       )}
       {!run && (
         <>

@@ -38,7 +38,7 @@ export const TUNING = {
 export type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number };
 export type Popup = { x: number; y: number; text: string; life: number; color: string; coins?: boolean };
 
-export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost' | 'comet';
+export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost' | 'comet' | 'revive';
 
 export type DeathReason = 'lost' | 'collapse';
 
@@ -89,6 +89,7 @@ export type State = {
   bosses: number;
   cometsRun: number;
   fevers: number;
+  revives: number;
   fever: number;
   magnet: number;
   shield: boolean;
@@ -123,7 +124,7 @@ export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_
     planets: [first], coins: [], powerups: [], comets: [], particles: [], popups: [], trail: [], events: [],
     cur: 0, ang: -Math.PI / 2, bx: 0, by: 0, vx: 0, vy: 0, flying: false, flyT: 0,
     camY: first.y - H * TUNING.cameraAnchor,
-    score: 0, coinsRun: 0, perfects: 0, combo: 0, bestCombo: 0, bosses: 0, cometsRun: 0, fevers: 0,
+    score: 0, coinsRun: 0, perfects: 0, combo: 0, bestCombo: 0, bosses: 0, cometsRun: 0, fevers: 0, revives: 0,
     fever: 0, magnet: 0, shield: mods.startShield && rules.powerups, slowmo: 0, bestIdx, zone: 0,
     ghost, ghostPtr: 0, ghostIdx: 0, ghostDone: ghost.length === 0, ghostAhead: false, landings: [],
     dead: false, deathReason: null, t: 0, shake: 0, shakeX: 0, shakeY: 0,
@@ -236,6 +237,28 @@ function fail(s: State, reason: DeathReason) {
   record(s, TRACK_END);
   burst(s, s.bx, s.by, C.danger, 26, 320);
   s.events.push('death');
+}
+
+/** Brings a dead ball back into orbit around the planet it was on, with a fresh fuse. */
+export function revive(s: State) {
+  if (!s.dead) return;
+  const cur = currentPlanet(s);
+  s.dead = false;
+  s.deathReason = null;
+  s.flying = false;
+  s.combo = 0;
+  s.revives += 1;
+  cur.fuse = cur.fuseMax;
+  s.ang = -Math.PI / 2;
+  orbit(s, cur);
+  s.trail.length = 0;
+  s.particles.length = 0;
+  if (s.landings[s.landings.length - 1]?.[1] === TRACK_END) s.landings.pop();
+  s.slowmo = TUNING.slowmoTime;
+  s.shake = 8;
+  banner(s, 0.35, 'REVIVED!', C.mint, 1.3);
+  burst(s, cur.x, cur.y, C.mint, 30, 300);
+  s.events.push('revive');
 }
 
 export function tap(s: State) {

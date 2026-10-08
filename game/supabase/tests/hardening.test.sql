@@ -98,3 +98,27 @@ insert into public.ledger (id, user_id, kind, source, amount, wallet_after, deta
 reset role;
 select tests.check((select not suspicious from public.ledger where id = '50000000-0000-4000-8000-000000000001'), 'platinum and diamond rewards pass');
 select tests.check((select suspicious from public.ledger where id = '50000000-0000-4000-8000-000000000002'), 'tiers beyond diamond are flagged');
+
+-- Revives are spends priced by the catalog, once per revive of a run.
+set role authenticated;
+select tests.login(:dave);
+insert into public.ledger (id, user_id, kind, source, amount, wallet_after, detail) values
+  ('60000000-0000-4000-8000-000000000001', :dave, 'spend', 'revive', 50, 1100, '{"run_id": "70000000-0000-4000-8000-000000000001", "count": 1}'),
+  ('60000000-0000-4000-8000-000000000002', :dave, 'spend', 'revive', 150, 950, '{"run_id": "70000000-0000-4000-8000-000000000001", "count": 2}'),
+  ('60000000-0000-4000-8000-000000000003', :dave, 'spend', 'revive', 50, 900, '{"run_id": "70000000-0000-4000-8000-000000000001", "count": 1}'),
+  ('60000000-0000-4000-8000-000000000004', :dave, 'spend', 'revive', 10, 890, '{"run_id": "70000000-0000-4000-8000-000000000002", "count": 1}'),
+  ('60000000-0000-4000-8000-000000000005', :dave, 'spend', 'revive', 300, 590, '{"run_id": "70000000-0000-4000-8000-000000000002", "count": 3}'),
+  ('60000000-0000-4000-8000-000000000006', :dave, 'spend', 'revive', 50, 540, '{"count": 1}');
+do $$
+begin
+  insert into public.ledger (id, user_id, kind, source, amount, wallet_after) values (gen_random_uuid(), '00000000-0000-4000-8000-0000000000d1', 'earn', 'revive', 50, 50);
+  raise exception 'FAILED: a revive recorded as earnings';
+exception when check_violation then null;
+end;
+$$;
+reset role;
+select tests.check(
+  (select array_agg(right(id::text, 1) order by id) = array['1', '2'] from public.ledger where source = 'revive' and not suspicious),
+  'valid revives pass; repeats, wrong prices, extra revives and missing runs are flagged'
+);
+select tests.check((select note = 'revive already paid' from public.ledger where id = '60000000-0000-4000-8000-000000000003'), 'repeat revives explain why');

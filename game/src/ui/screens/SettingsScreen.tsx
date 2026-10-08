@@ -60,7 +60,18 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
       {account}
 
       <SectionLabel>GAMEPLAY</SectionLabel>
-      <View style={styles.card}>
+      <View style={[styles.card, styles.stack]}>
+        <SettingRow icon="volume-high" color={settings.sound ? C.mint : C.dim} label="Sound effects" desc="Follows your phone's silent switch.">
+          <Switch
+            value={settings.sound}
+            onValueChange={(sound) => onChange({ ...settings, sound })}
+            trackColor={{ false: OFF_TRACK, true: C.mint }}
+            thumbColor={C.text}
+            ios_backgroundColor={OFF_TRACK}
+            accessibilityLabel="Sound effects"
+          />
+        </SettingRow>
+        <View style={styles.divider} />
         <SettingRow
           icon="ghost"
           color={settings.ghost ? C.mint : C.dim}
@@ -99,6 +110,8 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
 
 const styles = StyleSheet.create({
   card: { ...CARD, padding: 14 },
+  stack: { gap: 14 },
+  divider: { height: 1, backgroundColor: C.line },
   btn: { minWidth: 76, paddingVertical: 10 },
   input: { ...FIELD, marginTop: 6, paddingVertical: 8, paddingHorizontal: 10 },
 });

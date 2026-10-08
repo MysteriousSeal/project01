@@ -12,7 +12,7 @@ const [first] = challengeTypesFor(today);
 
 describe('startRun', () => {
   it('builds a normal run from upgrades, record and settings', () => {
-    const save = saveWith({ upgrades: { sturdy: 2 }, bestPlanet: 12, games: 1, ghost: [[1, 1]], settings: { ghost: true } });
+    const save = saveWith({ upgrades: { sturdy: 2 }, bestPlanet: 12, games: 1, ghost: [[1, 1]], settings: { ghost: true, sound: true } });
     const started = startRun(save, 'normal', '', today)!;
     expect(started.save).toBe(save);
     expect(started.config).toEqual({ mode: 'normal', mods: modsFrom({ sturdy: 2 }), rules: DEFAULT_RULES, ghost: [[1, 1]], bestIdx: 12, headStart: 0, showHint: true });
@@ -56,7 +56,7 @@ describe('startRun', () => {
     const base = startRun(saveWith(), 'daily', first.id, today)!.save;
     const withGhost = { ...base, challenges: { ...base.challenges, slots: base.challenges.slots.map((s) => (s.type === first.id ? { ...s, ghost: [[1, 3]] as [number, number][] } : s)) } };
     expect(startRun(withGhost, 'daily', first.id, today)!.config.ghost).toEqual([]);
-    expect(startRun({ ...withGhost, settings: { ghost: true } }, 'daily', first.id, today)!.config.ghost).toEqual([[1, 3]]);
+    expect(startRun({ ...withGhost, settings: { ghost: true, sound: true } }, 'daily', first.id, today)!.config.ghost).toEqual([[1, 3]]);
   });
 });
 

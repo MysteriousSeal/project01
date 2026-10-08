@@ -37,9 +37,9 @@ export type Save = {
   trophies: Record<string, number>;
 };
 
-export type Settings = { ghost: boolean };
+export type Settings = { ghost: boolean; sound: boolean };
 
-const defaultSettings = (): Settings => ({ ghost: false });
+const defaultSettings = (): Settings => ({ ghost: false, sound: true });
 
 export const defaultSave = (): Save => ({
   best: 0,
@@ -118,7 +118,7 @@ function challenges(raw: unknown, legacy: unknown): DailyChallenges {
 
 function settings(raw: unknown): Settings {
   const s = raw && typeof raw === 'object' ? (raw as Raw) : {};
-  return { ghost: s.ghost === true };
+  return { ghost: s.ghost === true, sound: s.sound !== false };
 }
 
 function stats(raw: unknown): LifetimeStats {

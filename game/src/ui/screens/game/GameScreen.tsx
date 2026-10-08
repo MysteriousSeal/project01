@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Skin, Theme, TrailStyle } from '../../../game/meta/cosmetics';
 import { RunConfig } from '../../../game/meta/session';
 import { hsl } from '../../../game/palette';
-import { Comet, createState, GameEvent, ghostActive, isSettled, launchDir, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, zoneOf } from '../../../game/sim/engine';
+import { Comet, createState, GameEvent, revive, ghostActive, isSettled, launchDir, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, zoneOf } from '../../../game/sim/engine';
 import { seededRng } from '../../../game/sim/rng';
 import { Ball } from '../../components/Ball';
 import { Coin, Icon } from '../../components/Icon';
@@ -12,6 +12,8 @@ import { TrailDot, trailLength } from '../../components/TrailDot';
 import { alpha, C } from '../../theme';
 import { Hud } from './Hud';
 import { PlanetView } from './PlanetView';
+import { EndFlow } from './endFlow';
+import { ReviveOverlay } from './ReviveOverlay';
 
 type Props = {
   W: number;
@@ -20,46 +22,58 @@ type Props = {
   trailStyle: TrailStyle;
   theme: Theme;
   config: RunConfig;
-  onEvent?: (e: GameEvent) => void;
+  onEvent?: (e: GameEvent, combo: number) => void;
   onEnd: (r: RunResult) => void;
+  /** Coins for the next revive of this run, or null when none is offered. */
+  reviveOffer?: (used: number) => number | null;
+  onRevive?: (used: number) => void;
+  wallet?: number;
 };
 
-const END_DELAY = 0.7;
+
+
 const COMET_SEED = 7919;
 const MAX_DT = 1 / 30;
 
-function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd']) {
+function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'], reviveOffer: Props['reviveOffer']) {
   const [, setFrame] = useState(0);
-  const emit = useEffectEvent((e: GameEvent) => onEvent?.(e));
+  const [offer, setOffer] = useState<number | null>(null);
+  const [flow] = useState(() => new EndFlow());
+  const emit = useEffectEvent((e: GameEvent) => onEvent?.(e, s.combo));
   const finish = useEffectEvent((r: RunResult) => onEnd(r));
+  const priceFor = useEffectEvent(() => reviveOffer?.(s.revives) ?? null);
 
   useEffect(() => {
     let raf = 0;
     let last = 0;
-    let deadFor = 0;
-    let ended = false;
     const loop = (now: number) => {
       const dt = last ? Math.min((now - last) / 1000, MAX_DT) : 0;
       last = now;
       step(s, dt);
       for (const e of s.events) emit(e);
       s.events.length = 0;
-      if (s.dead && !ended) {
-        deadFor += dt;
-        if (deadFor > END_DELAY) {
-          ended = true;
-          finish(runResult(s));
-        }
-      }
+      const next = flow.tick(dt, s.dead, priceFor);
+      if (next === 'end') finish(runResult(s));
+      else if (next !== null) setOffer(next);
       setFrame((f) => f + 1);
-      if (!(ended && isSettled(s))) raf = requestAnimationFrame(loop);
+      if (!(flow.ended && isSettled(s))) raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [s]);
+  }, [s, flow]);
+
+  const resume = () => {
+    flow.resume();
+    setOffer(null);
+  };
+  const decline = () => {
+    flow.decline();
+    setOffer(null);
+  };
+  return { offer, resume, decline };
 }
 
-export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onEnd }: Props) {
+export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onEnd, reviveOffer, onRevive, wallet = 0 }: Props) {
   const [g] = useState(() => {
     const seeded = config.seed !== undefined;
     return createState(W, H, {
@@ -68,7 +82,12 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
       cometRng: seeded ? seededRng(config.seed! + COMET_SEED) : Math.random,
     });
   });
-  useGameLoop(g, onEvent, onEnd);
+  const { offer, resume, decline } = useGameLoop(g, onEvent, onEnd, reviveOffer);
+  const accept = () => {
+    onRevive?.(g.revives);
+    revive(g);
+    resume();
+  };
 
   const shake = g.shake ? { transform: [{ translateX: g.shakeX }, { translateY: g.shakeY }] } : null;
   const cy = g.camY;
@@ -137,6 +156,8 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
       </View>
 
       <Hud g={g} challenge={config.challenge} />
+
+      {offer !== null && <ReviveOverlay price={offer} score={g.score} wallet={wallet} onRevive={accept} onDecline={decline} />}
 
       {config.showHint && g.score === 0 && alive && (
         <View style={styles.hint} pointerEvents="none">

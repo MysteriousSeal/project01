@@ -6,7 +6,7 @@ import type { Save } from './save';
 import type { OfferItem } from './shop';
 import { UPGRADES } from './upgrades';
 
-export type LedgerSource = 'opening' | 'run' | 'daily_reward' | 'trophy' | 'dev' | 'cosmetic' | 'deal' | 'bundle' | 'box' | 'boost' | 'upgrade';
+export type LedgerSource = 'opening' | 'run' | 'daily_reward' | 'trophy' | 'dev' | 'cosmetic' | 'deal' | 'bundle' | 'box' | 'boost' | 'upgrade' | 'revive';
 
 export type LedgerEntry = {
   id: string;
@@ -17,7 +17,7 @@ export type LedgerEntry = {
   detail: Record<string, unknown>;
 };
 
-export type ChangeReason = { source: 'run'; runId: string } | { source: 'daily_reward' } | { source: 'trophy' } | { source: 'dev' } | { source: 'shop' } | { source: 'other' };
+export type ChangeReason = { source: 'run'; runId: string } | { source: 'daily_reward' } | { source: 'trophy' } | { source: 'revive'; runId: string; count: number } | { source: 'dev' } | { source: 'shop' } | { source: 'other' };
 
 const gainedItems = (prev: Save, next: Save): OfferItem[] =>
   COSMETIC_KINDS.flatMap((kind) => {
@@ -72,6 +72,7 @@ function walletEntries(prev: Save, next: Save, walletAfter: number, reason: Chan
   const delta = walletAfter - prev.wallet;
   if (delta === 0) return [];
   const base = { id: newId(), wallet_after: walletAfter };
+  if (delta < 0 && reason.source === 'revive') return [{ ...base, kind: 'spend', amount: -delta, source: 'revive', detail: { run_id: reason.runId, count: reason.count } }];
   if (delta < 0) return [{ ...base, kind: 'spend', amount: -delta, ...spendEntry(prev, next, -delta) }];
   switch (reason.source) {
     case 'run':

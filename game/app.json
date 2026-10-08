@@ -45,7 +45,9 @@
       ],
       "expo-font",
       "expo-sqlite",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-audio",
+      "expo-asset"
     ]
   }
 }
