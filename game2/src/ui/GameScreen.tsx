@@ -2,7 +2,6 @@ import { ExpoWebGLRenderingContext, GLView } from 'expo-gl';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { GameScene } from '../render/GameScene';
-import { generateWorld } from '../world/world';
 import { Joystick } from './Joystick';
 
 export function GameScreen({ seed }: { seed: number }) {
@@ -19,7 +18,7 @@ export function GameScreen({ seed }: { seed: number }) {
   }, []);
 
   const onContextCreate = (gl: ExpoWebGLRenderingContext) => {
-    const scene = new GameScene(gl, generateWorld(seed));
+    const scene = new GameScene(gl, seed);
     loop.current.scene = scene;
     let last = 0;
     const tick = (now: number) => {

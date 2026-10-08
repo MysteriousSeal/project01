@@ -1,68 +1,123 @@
-// The world on screen: terrain, trees and the hero, a fixed isometric camera following them
-// (EvenHold's pan-and-follow, never orbiting), warm light and a peach haze in the distance.
+// The world on screen, drawn the way EvenHold's GameView draws it: its camera, lights, chunked
+// world layers (terrain, water, trees, bushes, ground cover), its stylizer (cel bands, haze and
+// valley mist) and its post-processing (light shafts, bloom). The hero walks through it.
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import * as THREE from 'three';
-import { createHero, type Hero, indexTrees, type Input, stepHero, type TreeIndex } from '../sim/hero';
-import type { World } from '../world/world';
+import { TILE_HEIGHT } from '../eh/model/constants';
+import { GameModel } from '../eh/model/GameModel';
+import type { MapSize } from '../eh/model/map/grid';
+import { generateWorld } from '../eh/model/worldgen/world';
+import { CAMERA_OFFSET, CAMERA_Y_SMOOTHING, FOG_COLOR } from '../eh/view/constants';
+import { buildBushes } from '../eh/view/meshes/bush/bushMesh';
+import { buildGroundCover } from '../eh/view/meshes/cover/groundCoverMesh';
+import { buildTerrain } from '../eh/view/meshes/terrain/terrainMesh';
+import { buildTrees } from '../eh/view/meshes/tree/treeMesh';
+import { buildWater } from '../eh/view/meshes/water/waterMesh';
+import { createCamera, resizeCamera } from '../eh/view/render/camera';
+import { addLights } from '../eh/view/render/lighting';
+import { PostProcessing } from '../eh/view/render/postprocessing';
+import { stylize, type Stylizer } from '../eh/view/render/stylize';
+import { ChunkStreamer } from '../eh/view/world/chunkStreamer';
+import { createHero, type Hero, indexBlockers, type Blockers, type Input, stepHero } from '../sim/hero';
 import { createRenderer } from './glRenderer';
 import { buildHero, type HeroRig, poseHero } from './heroMesh';
-import { FOG_FAR, FOG_NEAR, GROUND_BOUNCE, SKY, SKY_LIGHT, SUN } from './palette';
-import { buildTerrain } from './terrainMesh';
-import { buildTreeShadows, buildTrees } from './treeMesh';
 
-const CAMERA_OFFSET = new THREE.Vector3(14, 18, 14);
-const FRUSTUM = 6; // world units visible top to bottom; smaller is closer
-const CAMERA_Y_SMOOTHING = 8;
+export const WORLD_SIZE: MapSize = { width: 256, depth: 256 };
 const MAX_DT = 1 / 20;
+type WorldBuilder = (sink: ChunkStreamer, model: GameModel) => ((elapsedSeconds: number) => void) | void;
+const BUILDERS: WorldBuilder[] = [buildTerrain, buildWater, buildTrees, buildBushes, buildGroundCover];
+
+export type SceneOptions = { post: boolean };
+
+/**
+ * EvenHold's post-processing draws into half-float targets; without a GL extension that can
+ * render to them the screen would stay black, so such devices draw straight to the screen.
+ */
+export const canPostProcess = (gl: ExpoWebGLRenderingContext) => {
+  try {
+    return !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
+  } catch {
+    return false;
+  }
+};
 
 export class GameScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera: THREE.OrthographicCamera;
+  private camera = createCamera();
+  private world: ChunkStreamer;
+  private animations: ((elapsedSeconds: number) => void)[] = [];
+  private stylizer: Stylizer;
+  private post: PostProcessing | null;
   private rig: HeroRig;
-  private trees: TreeIndex;
-  private camY: number;
+  private blockers: Blockers;
+  private elapsed = 0;
+  private cameraY: number;
+  readonly model: GameModel;
   hero: Hero;
 
-  constructor(private gl: ExpoWebGLRenderingContext, private world: World) {
-    this.renderer = createRenderer(gl, SKY);
-    const aspect = gl.drawingBufferWidth / gl.drawingBufferHeight;
-    this.camera = new THREE.OrthographicCamera((-FRUSTUM * aspect) / 2, (FRUSTUM * aspect) / 2, FRUSTUM / 2, -FRUSTUM / 2, 0.1, 80);
-    this.scene.fog = new THREE.Fog(SKY, FOG_NEAR, FOG_FAR);
-    this.scene.add(new THREE.HemisphereLight(SKY_LIGHT, GROUND_BOUNCE, 1.6));
-    const sun = new THREE.DirectionalLight(SUN, 1.8);
-    sun.position.set(20, 30, 10);
-    this.scene.add(sun);
+  constructor(
+    private gl: ExpoWebGLRenderingContext,
+    seed: number,
+    options: SceneOptions = { post: canPostProcess(gl) },
+  ) {
+    const [width, height] = [gl.drawingBufferWidth, gl.drawingBufferHeight];
+    this.renderer = createRenderer(gl, FOG_COLOR);
+    resizeCamera(this.camera, width, height);
+    addLights(this.scene);
 
-    this.scene.add(buildTerrain(world));
-    this.scene.add(buildTreeShadows(world));
-    this.scene.add(buildTrees(world));
+    this.model = new GameModel(seed, WORLD_SIZE, generateWorld(seed, WORLD_SIZE));
+    this.world = new ChunkStreamer(this.scene);
+    for (const build of BUILDERS) {
+      const animate = build(this.world, this.model);
+      if (animate) this.animations.push(animate);
+    }
+
     this.rig = buildHero();
     this.scene.add(this.rig.root);
+    this.blockers = indexBlockers(this.model);
+    this.hero = createHero(this.model);
+    this.cameraY = this.hero.y;
+    this.world.loadAround(this.hero.x, this.hero.z);
 
-    this.trees = indexTrees(world);
-    this.hero = createHero(world);
-    this.camY = this.hero.y;
-    this.place();
+    // The stylized look goes on last, over every material (chunks not loaded yet included).
+    this.stylizer = stylize(this.scene, this.world.materials());
+    this.post = options.post ? new PostProcessing(this.renderer, this.scene, this.camera, { pixelRatio: 1, post: true, bloom: true, shafts: true, msaa: 0, uncapped: false }) : null;
+    this.post?.setSize(width, height, 1);
+    this.place(0);
   }
 
   /** Advances the world by `dt` seconds of input and draws a frame. */
   frame(dt: number, input: Input) {
-    this.hero = stepHero(this.hero, this.world, this.trees, input, Math.min(dt, MAX_DT));
-    this.camY += (this.hero.y - this.camY) * Math.min(1, CAMERA_Y_SMOOTHING * dt);
-    this.place();
-    this.renderer.render(this.scene, this.camera);
+    const step = Math.min(dt, MAX_DT);
+    this.elapsed += step;
+    this.hero = stepHero(this.hero, this.model, this.blockers, input, step);
+    this.world.update(this.hero.x, this.hero.z);
+    for (const animate of this.animations) animate(this.elapsed);
+    this.place(step);
+    if (this.post) this.post.render(this.elapsed);
+    else this.renderer.render(this.scene, this.camera);
     this.gl.endFrameEXP();
   }
 
-  private place() {
+  /** The hero's rig where the hero is, and the camera following as EvenHold's does. */
+  private place(dt: number) {
     const h = this.hero;
     this.rig.root.position.set(h.x, h.y, h.z);
     this.rig.root.rotation.y = h.facing;
     poseHero(this.rig, h.walk, h.moving);
-    const target = new THREE.Vector3(h.x, this.camY, h.z);
-    this.camera.position.copy(target).add(CAMERA_OFFSET);
-    this.camera.lookAt(target);
+    // The camera eases toward the ground height rather than the hero's, so hops don't bounce the screen.
+    const ground = this.model.tiles.height(Math.round(h.x), Math.round(h.z)) * TILE_HEIGHT;
+    this.cameraY += (ground - this.cameraY) * (1 - Math.exp(-CAMERA_Y_SMOOTHING * dt));
+    this.camera.position.set(h.x + CAMERA_OFFSET.x, this.cameraY + CAMERA_OFFSET.y, h.z + CAMERA_OFFSET.z);
+    this.camera.lookAt(h.x, this.cameraY, h.z);
+    this.stylizer.setFocusHeight(this.cameraY);
+  }
+
+  /** Draw calls and triangles of the last frame (every post pass included). */
+  stats() {
+    const { calls, triangles } = this.renderer.info.render;
+    return { calls, triangles };
   }
 
   dispose() {

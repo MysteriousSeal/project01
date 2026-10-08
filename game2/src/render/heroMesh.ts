@@ -1,13 +1,15 @@
 // A small voxel adventurer: hooded, belted tunic, boots. Limbs pivot at the shoulder and hip so
 // they can swing as the hero walks.
 import * as THREE from 'three';
-import { shadowMaterial } from './treeMesh';
 
 const C = { skin: 0xf2c49b, hood: 0x2f5d3a, tunic: 0x9b4a32, belt: 0x3a281c, buckle: 0xffd34d, legs: 0x5a4636, boots: 0x2b1d10, eye: 0x1a1a1a };
 
 export type HeroRig = { root: THREE.Group; body: THREE.Group; legL: THREE.Group; legR: THREE.Group; armL: THREE.Group; armR: THREE.Group };
 
-const mat = (color: number) => new THREE.MeshLambertMaterial({ color, flatShading: true });
+// Standard materials, so EvenHold's stylizer cel-shades and fogs the hero like the world around them.
+const mat = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true });
+const shadowMaterial = (opacity: number) =>
+  new THREE.MeshBasicMaterial({ color: 0x2b1d10, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 });
 
 function box(w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
