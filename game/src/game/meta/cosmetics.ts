@@ -1,9 +1,10 @@
 import { hsl, planetHue } from '../palette';
 import type { Save } from './save';
 
-export type Cosmetic = { id: string; name: string; price: number };
+/** `exclusive` items are season pass rewards: never sold, priced 0, and skipped by every offer. */
+export type Cosmetic = { id: string; name: string; price: number; exclusive?: boolean };
 export type Skin = Cosmetic & { ball: string; trail: string; outline?: boolean };
-export type TrailStyle = 'classic' | 'sparkle' | 'comet' | 'rainbow' | 'pixel' | 'ghost' | 'bubbles' | 'flame';
+export type TrailStyle = 'classic' | 'sparkle' | 'comet' | 'rainbow' | 'pixel' | 'ghost' | 'bubbles' | 'flame' | 'stardust';
 export type Trail = Cosmetic & { id: TrailStyle };
 export type Theme = Cosmetic & { swatch: [string, string, string]; planet: (idx: number) => string };
 export type CosmeticKind = 'skin' | 'trail' | 'theme';
@@ -24,6 +25,7 @@ export const SKINS: Skin[] = [
   { id: 'aurora', name: 'Aurora', ball: '#9dffe0', trail: '#b388ff', price: 1100 },
   { id: 'sun', name: 'Supernova', ball: '#fff3b0', trail: '#ff006e', price: 1500 },
   { id: 'obsidian', name: 'Obsidian', ball: '#2b2d42', trail: '#ffd34d', price: 2000, outline: true },
+  { id: 'deeporbit', name: 'Deep Orbit', ball: '#8be9fd', trail: '#bd93f9', price: 0, exclusive: true, outline: true },
 ];
 
 export const TRAILS: Trail[] = [
@@ -35,6 +37,7 @@ export const TRAILS: Trail[] = [
   { id: 'flame', name: 'Flame', price: 450 },
   { id: 'comet', name: 'Comet', price: 550 },
   { id: 'rainbow', name: 'Rainbow', price: 850 },
+  { id: 'stardust', name: 'Stardust', price: 0, exclusive: true },
 ];
 
 const cycle = (colors: string[]) => (idx: number) => colors[idx % colors.length];
@@ -46,6 +49,7 @@ export const THEMES: Theme[] = [
   { id: 'iceworld', name: 'Glacier', price: 450, swatch: ['#caf0f8', '#90e0ef', '#48cae4'], planet: cycle(['#caf0f8', '#90e0ef', '#48cae4', '#ade8f4', '#00b4d8']) },
   { id: 'neon', name: 'Neon', price: 700, swatch: ['#f72585', '#4cc9f0', '#b9fb40'], planet: cycle(['#f72585', '#4cc9f0', '#b9fb40', '#7209b7', '#ffbe0b']) },
   { id: 'mono', name: 'Mono', price: 1000, swatch: ['#f8f9fa', '#adb5bd', '#6c757d'], planet: cycle(['#f8f9fa', '#adb5bd', '#6c757d', '#dee2e6', '#ced4da']) },
+  { id: 'deeporbit', name: 'Deep Orbit', price: 0, exclusive: true, swatch: ['#2e1065', '#7c3aed', '#22d3ee'], planet: cycle(['#7c3aed', '#22d3ee', '#a78bfa', '#0891b2', '#c4b5fd']) },
 ];
 
 export const DEFAULT_COSMETIC = 'classic';
@@ -66,4 +70,4 @@ export const themeById = (id: string) => THEMES.find((t) => t.id === id) ?? THEM
 export const cosmeticById = (kind: CosmeticKind, id: string) => CATALOG[kind].items.find((i) => i.id === id);
 
 export const nextSkin = (save: Save): Skin | undefined =>
-  SKINS.filter((s) => !save.skins.includes(s.id)).sort((a, b) => a.price - b.price)[0];
+  SKINS.filter((s) => !s.exclusive && !save.skins.includes(s.id)).sort((a, b) => a.price - b.price)[0];

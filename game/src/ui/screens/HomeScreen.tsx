@@ -14,12 +14,12 @@ import { TopBar } from '../components/TopBar';
 import { useCompact, useLoop, useReducedMotion } from '../hooks';
 import { alpha, C, F, fmt, GAP, GUTTER } from '../theme';
 
-type Props = { save: Save; onPlay: () => void; onShop: () => void; onSettings: () => void };
+type Props = { save: Save; onPlay: () => void; onShop: () => void; onSettings: () => void; onSeason?: () => void; seasonReady?: boolean };
 
 const BOTTOM_H = 290;
 const TOP_H = 90;
 
-export function HomeScreen({ save, onPlay, onShop, onSettings }: Props) {
+export function HomeScreen({ save, onPlay, onShop, onSettings, onSeason, seasonReady }: Props) {
   const { width, height: windowH } = useWindowDimensions();
   const height = windowH - TAB_BAR_HEIGHT;
   const compact = useCompact();
@@ -35,7 +35,7 @@ export function HomeScreen({ save, onPlay, onShop, onSettings }: Props) {
       <Starfield width={width} height={height} count={70} />
       <View style={[styles.bigPlanet, { width: width * 1.6, height: width * 1.6, borderRadius: width, left: -width * 0.3, top: height - width * 0.24 }]} />
 
-      <TopBar save={save} onSettings={onSettings} />
+      <TopBar save={save} onSettings={onSettings} onSeason={onSeason} seasonReady={seasonReady} />
 
       <View style={styles.center}>
         <Text style={[styles.title, compact && { fontSize: 50 }]} accessibilityRole="header">ORBIT</Text>

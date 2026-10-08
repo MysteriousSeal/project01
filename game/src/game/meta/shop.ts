@@ -6,6 +6,8 @@ export type ShopResult = Save | null;
 
 export const priceOf = (kind: CosmeticKind, id: string) => CATALOG[kind].items.find((i) => i.id === id)?.price;
 
+export const isExclusive = (kind: CosmeticKind, id: string) => CATALOG[kind].items.some((i) => i.id === id && i.exclusive);
+
 export const owns = (save: Save, kind: CosmeticKind, id: string) => save[CATALOG[kind].owned].includes(id);
 
 export type OfferItem = { kind: CosmeticKind; id: string };
@@ -23,7 +25,7 @@ export function grant(save: Save, items: OfferItem[], price: number, equip = tru
 
 export function buyCosmetic(save: Save, kind: CosmeticKind, id: string): ShopResult {
   const price = priceOf(kind, id);
-  if (price === undefined || owns(save, kind, id)) return null;
+  if (price === undefined || isExclusive(kind, id) || owns(save, kind, id)) return null;
   return grant(save, [{ kind, id }], price);
 }
 

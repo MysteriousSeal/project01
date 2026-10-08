@@ -8,6 +8,7 @@ import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
 import { applyRun, RunReport } from './src/game/meta/progress';
 import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
 import { reviveOffer } from './src/game/meta/revive';
+import { claimSeason, SEASON, seasonStatus } from './src/game/meta/season';
 import type { GameEvent, RunResult } from './src/game/sim/engine';
 import { gameFeedback } from './src/services/device/feedback';
 import { haptic } from './src/services/device/haptics';
@@ -26,6 +27,7 @@ import { GameOverScreen } from './src/ui/screens/GameOverScreen';
 import { GameScreen } from './src/ui/screens/game/GameScreen';
 import { HomeScreen } from './src/ui/screens/HomeScreen';
 import { RanksScreen } from './src/ui/screens/RanksScreen';
+import { SeasonScreen } from './src/ui/screens/SeasonScreen';
 import { SettingsScreen } from './src/ui/screens/SettingsScreen';
 import { TrophiesScreen } from './src/ui/screens/TrophiesScreen';
 import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
@@ -36,11 +38,13 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 /** `runId` is the server id shared by the run row and any revive paid during it. */
 type Run = { id: number; runId: string; config: RunConfig };
 type Outcome = { result: RunResult; report: RunReport };
+/** Pages opened from Home on top of the tabs. */
+type Overlay = 'settings' | 'season' | null;
 
 export default function App() {
   const { width, height } = useWindowDimensions();
   const [tab, setTab] = useState<TabId>('home');
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [page, setPage] = useState<Overlay>(null);
   const [newTrophies, setNewTrophies] = useState(false);
   const { save, update, replace } = useSaveState(() => tab !== 'trophies' && setNewTrophies(true));
   const [run, setRun] = useState<Run | null>(null);
@@ -64,20 +68,20 @@ export default function App() {
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!inMenu) setRun(null);
-      else if (settingsOpen) setSettingsOpen(false);
+      else if (page) setPage(null);
       else if (tab !== 'home') setTab('home');
       else return false;
       return true;
     });
     return () => sub.remove();
-  }, [inMenu, tab, settingsOpen]);
+  }, [inMenu, tab, page]);
 
   if (!save) return <View style={styles.root} />;
 
   const goTab = (t: TabId) => {
     setTab(t);
     if (t === 'trophies') setNewTrophies(false);
-    setSettingsOpen(false);
+    setPage(null);
     setRun(null);
     setOutcome(null);
   };
@@ -124,6 +128,14 @@ export default function App() {
     haptic('success');
   };
 
+  const claimSeasonTiers = (tiers?: number[]) => {
+    const claimed = claimSeason(save, tiers);
+    if (!claimed) return;
+    update(claimed.save, { source: 'season', season: SEASON.id, tiers: claimed.coinTiers });
+    haptic('success');
+  };
+
+  const season = seasonStatus(save);
   const dailyBadge = dailyStatus(save).available || currentChallenges(save.challenges).slots.some(isOpen);
 
   return (
@@ -135,14 +147,15 @@ export default function App() {
       {!run && (
         <>
           <View style={styles.page}>
-            {!settingsOpen && tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} onSettings={() => setSettingsOpen(true)} />}
-            {!settingsOpen && tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
-            {!settingsOpen && tab === 'ranks' && <RanksScreen save={save} />}
-            {!settingsOpen && tab === 'shop' && <ShopScreen save={save} onChange={(next) => update(next, { source: 'shop' })} />}
-            {!settingsOpen && tab === 'trophies' && <TrophiesScreen save={save} />}
-            {settingsOpen && (
+            {!page && tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} onSettings={() => setPage('settings')} onSeason={season.open ? () => setPage('season') : undefined} seasonReady={season.claimable.length > 0} />}
+            {!page && tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
+            {!page && tab === 'ranks' && <RanksScreen save={save} />}
+            {!page && tab === 'shop' && <ShopScreen save={save} onChange={(next) => update(next, { source: 'shop' })} />}
+            {!page && tab === 'trophies' && <TrophiesScreen save={save} />}
+            {page === 'season' && <SeasonScreen save={save} onBack={() => setPage(null)} onClaim={claimSeasonTiers} />}
+            {page === 'settings' && (
               <SettingsScreen
-                onBack={() => setSettingsOpen(false)}
+                onBack={() => setPage(null)}
                 save={save}
                 onChange={(settings) => update({ ...save, settings })}
                 onRename={(name) => update({ ...save, name })}

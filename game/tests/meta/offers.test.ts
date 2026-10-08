@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
+import { SEASON } from '../../src/game/meta/season';
 import { countdownToTomorrow, dayKey } from '../../src/game/meta/calendar';
 import { CATALOG, COSMETIC_KINDS, THEMES } from '../../src/game/meta/cosmetics';
 import { boxOpenedToday, BUNDLES, bundleOffer, buyBundle, buyDeal, dailyDeal, DEAL_DISCOUNT, MYSTERY_PRICE, mysteryPool, openMysteryBox } from '../../src/game/meta/offers';
@@ -19,7 +20,11 @@ describe('catalog', () => {
     for (const kind of COSMETIC_KINDS) {
       const ids = CATALOG[kind].items.map((i) => i.id);
       expect(new Set(ids).size).toBe(ids.length);
-      expect(CATALOG[kind].items.filter((i) => i.price === 0).map((i) => i.id)).toEqual(['classic']);
+      expect(CATALOG[kind].items.filter((i) => i.price === 0 && !i.exclusive).map((i) => i.id)).toEqual(['classic']);
+      for (const i of CATALOG[kind].items.filter((x) => x.exclusive)) {
+        expect(i.price).toBe(0);
+        expect(SEASON.tiers.some((t) => t.item?.kind === kind && t.item.id === i.id)).toBe(true);
+      }
     }
   });
 

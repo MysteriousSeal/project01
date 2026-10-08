@@ -34,7 +34,8 @@ export type IconName =
   | 'gamepad'
   | 'ranking-star'
   | 'chevron-left'
-  | 'volume-high';
+  | 'volume-high'
+  | 'star';
 
 type Props = { name: IconName; size?: number; color?: string; style?: StyleProp<TextStyle> };
 

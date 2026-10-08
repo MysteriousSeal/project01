@@ -172,8 +172,8 @@ reset role;
 set role authenticated;
 do $$
 begin
-  update public.catalog_items set price = 0;
-  if exists (select 1 from public.catalog_items where price = 0 and id <> 'classic') then
+  update public.catalog_items set price = 4242;
+  if exists (select 1 from public.catalog_items where price = 4242) then
     raise exception 'FAILED: players changed catalog prices';
   end if;
 end;

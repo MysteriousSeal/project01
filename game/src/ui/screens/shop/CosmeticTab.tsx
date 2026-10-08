@@ -40,11 +40,11 @@ export function CosmeticTab({ items, owned, equipped, wallet, renderIcon, render
               style={[styles.card, { width: cardW }, selected && styles.selected]}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`${k.name}, ${e ? 'equipped' : o ? 'owned' : `${k.price} coins`}`}
+              accessibilityLabel={`${k.name}, ${e ? 'equipped' : o ? 'owned' : k.exclusive ? 'season pass reward' : `${k.price} coins`}`}
             >
               {renderIcon(k.id)}
               <Text style={styles.name}>{k.name}</Text>
-              <Text style={[styles.tag, { color: e ? C.mint : o ? C.dim : C.gold }]}>{e ? 'Equipped' : o ? 'Owned' : <><Coin size={11} /> {fmt(k.price)}</>}</Text>
+              <Text style={[styles.tag, { color: e ? C.mint : o ? C.dim : k.exclusive ? C.sky : C.gold }]}>{e ? 'Equipped' : o ? 'Owned' : k.exclusive ? 'Season' : <><Coin size={11} /> {fmt(k.price)}</>}</Text>
             </Pressable>
           );
         })}
@@ -55,7 +55,7 @@ export function CosmeticTab({ items, owned, equipped, wallet, renderIcon, render
         <View style={styles.info}>
           <View>
             <Text style={styles.selName}>{sel.name}</Text>
-            <Text style={styles.selSub}>{has ? (on ? 'Currently equipped' : 'In your collection') : <><Coin size={12} /> {fmt(sel.price)}</>}</Text>
+            <Text style={styles.selSub}>{has ? (on ? 'Currently equipped' : 'In your collection') : sel.exclusive ? 'Season pass reward' : <><Coin size={12} /> {fmt(sel.price)}</>}</Text>
           </View>
           <ActionButton item={sel} has={has} on={on} wallet={wallet} onBuy={onBuy} onEquip={onEquip} />
         </View>
@@ -67,6 +67,7 @@ export function CosmeticTab({ items, owned, equipped, wallet, renderIcon, render
 function ActionButton({ item, has, on, wallet, onBuy, onEquip }: { item: Cosmetic; has: boolean; on: boolean; wallet: number; onBuy: (id: string) => void; onEquip: (id: string) => void }) {
   if (on) return <Button label="Equipped" variant="muted" labelColor={C.mint} />;
   if (has) return <Button label="Equip" variant="sky" onPress={() => onEquip(item.id)} />;
+  if (item.exclusive) return <Button label="Season pass" variant="muted" labelColor={C.sky} />;
   if (wallet < item.price) return <Button label="Need" price={item.price - wallet} variant="muted" />;
   return <Button label="Buy for" price={item.price} variant="gold" onPress={() => onBuy(item.id)} accessibilityLabel={`Buy ${item.name} for ${item.price} coins`} />;
 }

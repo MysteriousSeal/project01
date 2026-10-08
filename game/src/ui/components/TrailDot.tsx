@@ -45,6 +45,12 @@ export function TrailDot({ style, k, i, x, y, color, t, scale = 1 }: Props) {
         <View style={{ position: 'absolute', left: x + jx - s / 2, top: y + jy - s / 2, width: s, height: s, borderRadius: s, backgroundColor: i % 3 === 0 ? '#ffffff' : color, opacity: tw * (0.3 + k * 0.7) }} />
       );
     }
+    case 'stardust': {
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 9 + i * 2.3));
+      const s = (3 + k * 7) * scale;
+      const drift = (1 - k) * 12 * scale;
+      return box(s, { left: x - s / 2 + Math.sin(i * 4.1) * drift, top: y - s / 2 + Math.cos(i * 2.7) * drift, borderRadius: s, backgroundColor: i % 2 ? '#ffd34d' : '#ffffff', opacity: tw * (0.25 + k * 0.75), shadowColor: '#ffd34d', shadowOpacity: 0.8, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } });
+    }
     default: {
       const s = (6 + k * 12) * scale;
       return box(s, { borderRadius: s, backgroundColor: color, opacity: 0.1 + k * 0.6 });

@@ -32,6 +32,7 @@ export function GameOverScreen({ result, report, onRetry, onHome, onShop }: Prop
           {daily && daily.reward > 0 && <Text style={[styles.badge, { backgroundColor: C.gold }]}><Coin color={C.space} size={13} /> +{daily.reward}</Text>}
           {report.newBest && <Text style={[styles.badge, { backgroundColor: C.gold }]}>NEW BEST!</Text>}
           {leveled && <Text style={[styles.badge, { backgroundColor: C.sky }]}>LEVEL {report.levelAfter}  <Coin color={C.space} size={13} /> +{report.levelReward}</Text>}
+          {report.seasonTiers > 0 && <Text style={[styles.badge, { backgroundColor: C.gold }]}><Icon name="star" size={12} color={C.space} /> SEASON TIER {report.seasonTierAfter}</Text>}
           {report.toBest !== null && <Text style={[styles.badge, { backgroundColor: C.pink }]}>SO CLOSE · {report.toBest} FROM BEST</Text>}
           {report.trophies.slice(0, MAX_TROPHY_BADGES).map((u) => (
             <Text key={`${u.trophy.id}${u.tier}`} style={[styles.badge, { backgroundColor: TROPHY_TIERS[u.tier - 1].color }]}>

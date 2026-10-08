@@ -5,7 +5,9 @@ import { C, F, fmt, GUTTER, RADIUS, TOP_INSET } from '../theme';
 import { ProgressBar } from './ProgressBar';
 import { Coin, Icon } from './Icon';
 
-export function TopBar({ save, onShop, onSettings }: { save: Save; onShop?: () => void; onSettings?: () => void }) {
+type Props = { save: Save; onShop?: () => void; onSettings?: () => void; onSeason?: () => void; seasonReady?: boolean };
+
+export function TopBar({ save, onShop, onSettings, onSeason, seasonReady }: Props) {
   const { lvl, into, need } = levelInfo(save.xp);
   const wallet = (
     <>
@@ -26,6 +28,12 @@ export function TopBar({ save, onShop, onSettings }: { save: Save; onShop?: () =
       ) : (
         <View style={styles.row}>
           {wallet}
+          {onSeason && (
+            <Pressable onPress={onSeason} hitSlop={10} style={({ pressed }) => [styles.gear, styles.season, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Season pass${seasonReady ? ', rewards ready' : ''}`}>
+              <Icon name="star" size={16} color={C.gold} />
+              {seasonReady && <View style={styles.dot} />}
+            </Pressable>
+          )}
           {onSettings && (
             <Pressable onPress={onSettings} hitSlop={10} style={({ pressed }) => [styles.gear, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Settings">
               <Icon name="gear" size={17} color={C.soft} />
@@ -44,5 +52,7 @@ const styles = StyleSheet.create({
   wallet: { color: C.gold, fontSize: 18, fontWeight: '700', fontFamily: F.mono },
   gear: { width: 34, height: 34, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, marginLeft: 4 },
   pressed: { opacity: 0.7 },
+  season: { borderColor: C.goldEdge, backgroundColor: C.goldWash },
+  dot: { position: 'absolute', top: -3, right: -3, width: 10, height: 10, borderRadius: 5, backgroundColor: C.pink, borderWidth: 1.5, borderColor: C.space },
   shop: { color: C.space, backgroundColor: C.gold, fontWeight: '900', fontSize: 13, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm, overflow: 'hidden' },
 });

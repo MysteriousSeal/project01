@@ -5,6 +5,7 @@ import type { Rng } from '../sim/rng';
 import { trackBest } from '../sim/ghost';
 import type { Save } from './save';
 import type { RunMode } from './session';
+import { addSeasonPoints, currentSeason, tierReached } from './season';
 import { addRunStats, awardTrophies, TrophyUnlock } from './trophies';
 
 export const xpForLevel = (lvl: number) => 80 + lvl * 40;
@@ -48,6 +49,9 @@ export type RunReport = {
   /** Points short of the personal best when the run came close, otherwise null. */
   toBest: number | null;
   trophies: TrophyUnlock[];
+  /** Season pass tiers reached by this run (0 when the season is closed). */
+  seasonTiers: number;
+  seasonTierAfter: number;
   challenge?: ChallengeOutcome;
 };
 
@@ -61,6 +65,8 @@ const withTrophies = (save: Save) => {
   const { save: next, unlocked } = awardTrophies(save);
   return { save: next, trophies: unlocked };
 };
+
+const seasonTier = (save: Save) => tierReached(currentSeason(save.season).points);
 
 export type ApplyOptions = { mode?: RunMode; challenge?: string; rng?: Rng; now?: Date };
 
@@ -77,17 +83,19 @@ export function applyRun(save: Save, r: RunResult, { mode = 'normal', challenge:
     ...save, xp, wallet: save.wallet + r.coins + missionCoins + levelReward, games: save.games + 1,
     missions: shown.filter((m) => !isDone(m)), stats: addRunStats(save.stats, r),
   };
-  const report = { xpGained, levelBefore, levelAfter, levelReward, completed, shown };
+  const seasoned = addSeasonPoints(base, xpGained, now);
+  const seasonTiers = seasonTier(seasoned) - seasonTier(save);
+  const report = { xpGained, levelBefore, levelAfter, levelReward, completed, shown, seasonTiers, seasonTierAfter: seasonTier(seasoned) };
 
   if (mode === 'daily') {
     const recorded = recordChallenge(save.challenges, type, r, now);
-    const next = ensureMissions(recorded ? { ...base, challenges: recorded.challenges, wallet: base.wallet + recorded.outcome.reward } : base, rng);
+    const next = ensureMissions(recorded ? { ...seasoned, challenges: recorded.challenges, wallet: seasoned.wallet + recorded.outcome.reward } : seasoned, rng);
     return { ...report, ...withTrophies(next), newBest: false, toBest: null, challenge: recorded?.outcome };
   }
 
   const betterGhost = r.planets > trackBest(save.ghost);
   const next = ensureMissions(
-    { ...base, best: Math.max(save.best, r.score), bestPlanet: Math.max(save.bestPlanet, r.planets), ghost: betterGhost ? r.landings : save.ghost },
+    { ...seasoned, best: Math.max(save.best, r.score), bestPlanet: Math.max(save.bestPlanet, r.planets), ghost: betterGhost ? r.landings : save.ghost },
     rng,
   );
   return { ...report, ...withTrophies(next), newBest: r.score > save.best && r.score > 0, toBest: shortOfBest(r.score, save.best) };

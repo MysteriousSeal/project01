@@ -4,6 +4,7 @@ import { BOOSTS, MAX_BOOST_STACK } from './boosts';
 import { CATALOG, COSMETIC_KINDS, DEFAULT_COSMETIC } from './cosmetics';
 import { parseTrack, Track } from '../sim/ghost';
 import { Mission, MISSION_KINDS, MISSION_SLOTS } from './missions';
+import { emptySeason, SEASON_TIERS, SeasonProgress } from './season';
 import { emptyStats, LifetimeStats, MAX_TROPHY_TIER, STAT_KEYS, TROPHIES } from './trophies';
 import { maxLevel, UPGRADES } from './upgrades';
 
@@ -35,6 +36,7 @@ export type Save = {
   stats: LifetimeStats;
   /** Highest tier earned per trophy id. */
   trophies: Record<string, number>;
+  season: SeasonProgress;
 };
 
 export type Settings = { ghost: boolean; sound: boolean };
@@ -68,6 +70,7 @@ export const defaultSave = (): Save => ({
   ledgerStarted: false,
   stats: emptyStats(),
   trophies: {},
+  season: emptySeason(),
 });
 
 type Raw = Record<string, unknown>;
@@ -138,6 +141,12 @@ function trophies(raw: unknown): Record<string, number> {
   return out;
 }
 
+function season(raw: unknown): SeasonProgress {
+  const r = raw && typeof raw === 'object' ? (raw as Raw) : {};
+  const claimed = Array.isArray(r.claimed) ? r.claimed.filter((t): t is number => Number.isInteger(t) && t >= 1 && t <= SEASON_TIERS) : [];
+  return { id: text(r.id) || emptySeason().id, points: count(r.points), claimed: [...new Set(claimed)].sort((a, b) => a - b) };
+}
+
 export function normalizeSave(input: unknown): Save {
   const base = defaultSave();
   if (!input || typeof input !== 'object') return base;
@@ -190,5 +199,6 @@ export function normalizeSave(input: unknown): Save {
     ledgerStarted: r.ledgerStarted === true,
     stats: stats(r.stats),
     trophies: trophies(r.trophies),
+    season: season(r.season),
   };
 }
