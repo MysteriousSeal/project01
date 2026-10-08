@@ -29,6 +29,7 @@ export type Save = {
   challenges: DailyChallenges;
   settings: Settings;
   savedAt: number;
+  name: string;
 };
 
 export type Settings = { ghost: boolean };
@@ -58,9 +59,17 @@ export const defaultSave = (): Save => ({
   challenges: emptyChallenges(),
   settings: defaultSettings(),
   savedAt: 0,
+  name: '',
 });
 
 type Raw = Record<string, unknown>;
+
+export const NAME_PATTERN = /^[A-Za-z0-9 _-]{3,16}$/;
+
+export function cleanName(input: string): string | null {
+  const name = input.trim().replace(/\s+/g, ' ');
+  return NAME_PATTERN.test(name) ? name : null;
+}
 
 const count = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
 const text = (v: unknown) => (typeof v === 'string' ? v : '');
@@ -152,5 +161,6 @@ export function normalizeSave(input: unknown): Save {
     challenges: challenges(r.challenges, r.challenge),
     settings: settings(r.settings),
     savedAt: count(r.savedAt),
+    name: cleanName(text(r.name)) ?? '',
   };
 }

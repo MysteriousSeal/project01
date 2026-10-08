@@ -36,7 +36,9 @@ export type Popup = { x: number; y: number; text: string; life: number; color: s
 
 export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost';
 
-export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number; landings: Track };
+export type DeathReason = 'lost' | 'collapse';
+
+export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number; landings: Track; time: number; death: DeathReason | null };
 
 export type State = {
   W: number;
@@ -79,7 +81,7 @@ export type State = {
   ghostAhead: boolean;
   landings: Track;
   dead: boolean;
-  deathReason: 'lost' | 'collapse' | null;
+  deathReason: DeathReason | null;
   t: number;
   shake: number;
   shakeX: number;
@@ -126,7 +128,7 @@ export const launchDir = (s: State) => {
   return { x: -Math.sin(s.ang) * dir, y: Math.cos(s.ang) * dir };
 };
 
-export const runResult = (s: State): RunResult => ({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur, landings: s.landings });
+export const runResult = (s: State): RunResult => ({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur, landings: s.landings, time: s.t, death: s.deathReason });
 
 export const isSettled = (s: State) => s.dead && s.particles.length === 0 && s.popups.length === 0;
 export const ghostActive = (s: State) => !s.ghostDone;
@@ -182,7 +184,7 @@ function orbit(s: State, p: Planet) {
   s.by = p.y + Math.sin(s.ang) * p.orbit;
 }
 
-function fail(s: State, reason: 'lost' | 'collapse') {
+function fail(s: State, reason: DeathReason) {
   if (s.shield) {
     const cur = currentPlanet(s);
     s.shield = false;

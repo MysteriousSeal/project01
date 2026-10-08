@@ -15,3 +15,8 @@ export async function loadSave(): Promise<Save> {
 export function writeSave(save: Save) {
   AsyncStorage.setItem(KEY, JSON.stringify(save)).catch(() => {});
 }
+
+export const keyValue = (key: string) => ({
+  get: () => AsyncStorage.getItem(key),
+  set: (value: string) => AsyncStorage.setItem(key, value),
+});

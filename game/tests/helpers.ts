@@ -48,7 +48,7 @@ export const hopTo = (s: State, idx: number) => {
   while (s.cur < idx - 1) hop(s);
 };
 
-export const result = (patch: Partial<RunResult> = {}): RunResult => ({ score: 0, coins: 0, perfects: 0, bestCombo: 0, planets: 0, landings: [], ...patch });
+export const result = (patch: Partial<RunResult> = {}): RunResult => ({ score: 0, coins: 0, perfects: 0, bestCombo: 0, planets: 0, landings: [], time: 0, death: null, ...patch });
 
 export const MONDAY = 8;
 export const day = (d: number, h = 12) => new Date(2026, 5, d, h);

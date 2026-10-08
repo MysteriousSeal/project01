@@ -23,7 +23,11 @@ export type IconName =
   | 'gift'
   | 'tag'
   | 'box-open'
-  | 'layer-group';
+  | 'layer-group'
+  | 'trophy'
+  | 'rotate-right'
+  | 'wifi'
+  | 'user-astronaut';
 
 type Props = { name: IconName; size?: number; color?: string; style?: StyleProp<TextStyle> };
 

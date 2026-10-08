@@ -13,11 +13,14 @@ import type { RunResult } from './src/game/sim/engine';
 import { haptic, hapticForEvent } from './src/services/haptics';
 import { loadSave, writeSave } from './src/services/storage';
 import { useCloudSync } from './src/services/useCloudSync';
+import { telemetry, useTelemetry } from './src/services/useTelemetry';
+import { runRow, uuid } from './src/game/meta/stats';
 import { TabBar, TabId } from './src/ui/components/TabBar';
 import { DailyScreen } from './src/ui/screens/DailyScreen';
 import { GameOverScreen } from './src/ui/screens/GameOverScreen';
 import { GameScreen } from './src/ui/screens/game/GameScreen';
 import { HomeScreen } from './src/ui/screens/HomeScreen';
+import { RanksScreen } from './src/ui/screens/RanksScreen';
 import { SettingsScreen } from './src/ui/screens/SettingsScreen';
 import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
 import { C } from './src/ui/theme';
@@ -47,6 +50,7 @@ export default function App() {
   }, [save]);
 
   useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
+  useTelemetry(save?.name ?? '');
 
   const loaded = save !== null;
   useEffect(() => {
@@ -92,6 +96,7 @@ export default function App() {
     if (!run) return;
     const report = applyRun(save, result, { mode: run.config.mode, challenge: run.config.challenge?.id });
     update(report.save);
+    void telemetry?.logRun(runRow(uuid(), run.config, result, save.challenges.day || null));
     setOutcome({ result, report });
     if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
   };
@@ -116,11 +121,13 @@ export default function App() {
           <View style={styles.page}>
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
             {tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
+            {tab === 'ranks' && <RanksScreen save={save} />}
             {tab === 'shop' && <ShopScreen save={save} onChange={update} />}
             {tab === 'settings' && (
               <SettingsScreen
                 save={save}
                 onChange={(settings) => update({ ...save, settings })}
+                onRename={(name) => update({ ...save, name })}
                 onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }) : undefined}
               />
             )}
