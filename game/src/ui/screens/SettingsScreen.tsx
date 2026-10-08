@@ -1,10 +1,10 @@
 import { ReactNode, useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Switch, TextInput, View } from 'react-native';
 import { cleanName, Save, Settings } from '../../game/meta/save';
 import { Button } from '../components/Button';
-import { Icon } from '../components/Icon';
 import { Page, SectionLabel } from '../components/Page';
-import { alpha, C, CARD, RADIUS } from '../theme';
+import { SettingRow } from '../components/SettingRow';
+import { alpha, C, CARD, FIELD } from '../theme';
 
 type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; account?: ReactNode };
 
@@ -32,11 +32,15 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
   return (
     <Page save={save} title="Settings">
       <SectionLabel>PROFILE</SectionLabel>
-      <View style={[styles.card, styles.row]}>
-        <Icon name="user-astronaut" size={20} color={C.sky} style={styles.rowIcon} />
-        <View style={styles.body}>
-          <Text style={styles.label}>Pilot name</Text>
-          <TextInput
+      <View style={styles.card}>
+        <SettingRow
+          icon="user-astronaut"
+          color={C.sky}
+          label="Pilot name"
+          desc={invalid ? '3 to 16 letters, numbers, spaces, - or _.' : 'Shown on the leaderboards.'}
+          error={invalid}
+          field={
+            <TextInput
             value={draft}
             onChangeText={setDraft}
             onEndEditing={commitName}
@@ -49,22 +53,20 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
             style={styles.input}
             accessibilityLabel="Pilot name"
           />
-          <Text style={[styles.desc, invalid && { color: C.danger }]}>
-            {invalid ? '3 to 16 letters, numbers, spaces, - or _.' : 'Shown on the leaderboards.'}
-          </Text>
-        </View>
+          }
+        />
       </View>
 
       {account}
 
       <SectionLabel>GAMEPLAY</SectionLabel>
       <View style={styles.card}>
-        <View style={styles.row}>
-          <Icon name="ghost" size={20} color={settings.ghost ? C.mint : C.dim} style={styles.rowIcon} />
-          <View style={styles.body}>
-            <Text style={styles.label}>Ghost of your best run</Text>
-            <Text style={styles.desc}>Race a replay of your best run. In daily challenges, it replays your best attempt of the day.</Text>
-          </View>
+        <SettingRow
+          icon="ghost"
+          color={settings.ghost ? C.mint : C.dim}
+          label="Ghost of your best run"
+          desc="Race a replay of your best run. In daily challenges, it replays your best attempt of the day."
+        >
           <Switch
             value={settings.ghost}
             onValueChange={(ghost) => onChange({ ...settings, ghost })}
@@ -73,30 +75,22 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
             ios_backgroundColor={OFF_TRACK}
             accessibilityLabel="Ghost of your best run"
           />
-        </View>
+        </SettingRow>
       </View>
 
       {__DEV__ && (onAddCoins || onResetAttempts) && <SectionLabel>DEVELOPER · DEV BUILDS ONLY</SectionLabel>}
       {__DEV__ && onAddCoins && (
-        <>
-          <View style={[styles.card, styles.row]}>
-            <Icon name="coins" size={20} color={C.gold} style={styles.rowIcon} />
-            <View style={styles.body}>
-              <Text style={styles.label}>Add coins</Text>
-              <Text style={styles.desc}>Testing cheat. Hidden in release builds.</Text>
-            </View>
+        <View style={styles.card}>
+          <SettingRow icon="coins" color={C.gold} label="Add coins" desc="Testing cheat. Hidden in release builds.">
             <Button label={`+${DEV_COINS}`} variant="gold" onPress={() => onAddCoins(DEV_COINS)} accessibilityLabel={`Add ${DEV_COINS} coins`} style={styles.btn} />
-          </View>
-        </>
+          </SettingRow>
+        </View>
       )}
       {__DEV__ && onResetAttempts && (
-        <View style={[styles.card, styles.row]}>
-          <Icon name="rotate-right" size={20} color={C.gold} style={styles.rowIcon} />
-          <View style={styles.body}>
-            <Text style={styles.label}>Reset daily attempts</Text>
-            <Text style={styles.desc}>Gives back all attempts for today&apos;s challenges. Best scores and medals stay.</Text>
-          </View>
-          <Button label="Reset" variant="gold" onPress={onResetAttempts} accessibilityLabel="Reset daily challenge attempts" style={styles.btn} />
+        <View style={styles.card}>
+          <SettingRow icon="rotate-right" color={C.gold} label="Reset daily attempts" desc="Gives back all attempts for today's challenges. Best scores and medals stay.">
+            <Button label="Reset" variant="gold" onPress={onResetAttempts} accessibilityLabel="Reset daily challenge attempts" style={styles.btn} />
+          </SettingRow>
         </View>
       )}
     </Page>
@@ -104,12 +98,7 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
 }
 
 const styles = StyleSheet.create({
-  card: { ...CARD },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  rowIcon: { width: 26, textAlign: 'center' },
-  body: { flex: 1 },
-  label: { color: C.text, fontSize: 15, fontWeight: '800' },
-  desc: { color: C.dim, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  card: { ...CARD, padding: 14 },
   btn: { minWidth: 76, paddingVertical: 10 },
-  input: { color: C.text, fontSize: 15, fontWeight: '700', marginTop: 6, paddingVertical: 8, paddingHorizontal: 10, borderRadius: RADIUS.sm, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line },
+  input: { ...FIELD, marginTop: 6, paddingVertical: 8, paddingHorizontal: 10 },
 });

@@ -17,6 +17,8 @@ export const BOTTOM_INSET = 30;
 
 export const CARD = { backgroundColor: C.panel, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: C.line } as const;
 
+export const FIELD = { color: C.text, fontSize: 15, fontWeight: '700', paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.sm, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line } as const;
+
 export const FILL = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const;
 
 export { fmt } from '../game/format';

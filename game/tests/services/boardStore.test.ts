@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { allBoards, Board, BoardEntry, boardKey } from '../../src/game/meta/stats';
-import { BoardStore } from '../../src/services/boardStore';
+import { BoardStore } from '../../src/services/sync/boardStore';
 
 const entry = (rank: number): BoardEntry => ({ rank, name: `P${rank}`, value: 100 - rank, me: false });
 

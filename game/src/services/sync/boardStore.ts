@@ -1,5 +1,5 @@
-import { Board, BoardEntry, boardKey } from '../game/meta/stats';
-import type { StatsApi } from './statsApi';
+import { Board, BoardEntry, boardKey } from '../../game/meta/stats';
+import type { StatsApi } from '../backend/statsApi';
 
 type Listener = () => void;
 

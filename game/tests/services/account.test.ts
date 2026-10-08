@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { progressSummary, recommendedSource } from '../../src/game/meta/sync';
-import { authMessage, supabaseAccount } from '../../src/services/account';
-import { CloudApi } from '../../src/services/cloudApi';
-import { CloudSync } from '../../src/services/cloudSync';
+import { authMessage, supabaseAccount } from '../../src/services/backend/accountApi';
+import { CloudApi } from '../../src/services/backend/savesApi';
+import { CloudSync } from '../../src/services/sync/cloudSync';
 import { saveWith } from '../helpers';
 
 type User = { id: string; is_anonymous?: boolean; email?: string; identities?: { provider: string }[] };

@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import type { GameEvent } from '../game/sim/engine';
+import type { GameEvent } from '../../game/sim/engine';
 
 export type Cue = 'light' | 'medium' | 'heavy' | 'select' | 'success' | 'error';
 

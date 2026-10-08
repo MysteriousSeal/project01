@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { normalizeSave, Save } from '../game/meta/save';
+import { normalizeSave, Save } from '../../game/meta/save';
 
 export type CloudApi = {
   signIn: () => Promise<string | null>;

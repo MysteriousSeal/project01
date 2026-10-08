@@ -39,16 +39,19 @@ export class Outbox {
     return this.items.length;
   }
 
-  async add(item: OutboxItem) {
+  async add(...items: OutboxItem[]) {
     await this.ready;
-    this.items.push(item);
+    this.items.push(...items);
     if (this.items.length > this.limit) this.items.splice(0, this.items.length - this.limit);
     await this.persist();
   }
 
   async drain(send: Send) {
     if (this.draining) return this.draining;
-    this.draining = this.drainAll(send).finally(() => {
+    this.draining = (async () => {
+      // Rows added while a pass was running are picked up by the next pass.
+      while ((await this.drainAll(send)) && this.items.length);
+    })().finally(() => {
       this.draining = null;
     });
     return this.draining;
@@ -61,9 +64,9 @@ export class Outbox {
         const batch = this.items.filter((i) => i.table === table).slice(0, BATCH_SIZE);
         if (!batch.length) break;
         const result = await send(table, batch.map((i) => i.row)).catch((): SendResult => 'retry');
-        if (result === 'retry') return;
+        if (result === 'retry') return false;
         if (result === 'reject' && batch.length > 1) {
-          if (!(await this.sendEach(table, batch, send))) return;
+          if (!(await this.sendEach(table, batch, send))) return false;
           continue;
         }
         const sent = new Set(batch);
@@ -71,6 +74,7 @@ export class Outbox {
         await this.persist();
       }
     }
+    return true;
   }
 
   private async sendEach(table: OutboxTable, batch: OutboxItem[], send: Send) {

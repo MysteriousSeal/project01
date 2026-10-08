@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Board, BoardEntry } from '../game/meta/stats';
-import type { OutboxTable, SendResult } from './outbox';
+import type { Board, BoardEntry } from '../../game/meta/stats';
+import type { OutboxTable, SendResult } from '../sync/outbox';
 
 export type StatsApi = {
   userId: () => Promise<string | null>;

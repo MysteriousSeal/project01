@@ -5,7 +5,7 @@ import { CATALOG, CosmeticKind, skinById, themeById, trailById } from '../../../
 import { buyBundle, buyDeal, openMysteryBox } from '../../../game/meta/offers';
 import { Save } from '../../../game/meta/save';
 import { buyCosmetic, buyUpgrade, equipCosmetic, OfferItem, ShopResult } from '../../../game/meta/shop';
-import { haptic } from '../../../services/haptics';
+import { haptic } from '../../../services/device/haptics';
 import { CosmeticPreview } from '../../components/CosmeticPreview';
 import { OrbitHero } from '../../components/OrbitHero';
 import { Page } from '../../components/Page';

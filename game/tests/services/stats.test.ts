@@ -6,9 +6,9 @@ import { boardValue, isPlausibleRun, runRow, uuid } from '../../src/game/meta/st
 import { xpForLevel } from '../../src/game/meta/progress';
 import { createState, launchDir, planetOf, runResult, step, tap } from '../../src/game/sim/engine';
 import { seededRng } from '../../src/game/sim/rng';
-import { BATCH_SIZE, KeyValue, Outbox, OutboxItem } from '../../src/services/outbox';
-import { StatsApi, supabaseStats } from '../../src/services/statsApi';
-import { Telemetry } from '../../src/services/telemetry';
+import { BATCH_SIZE, KeyValue, Outbox, OutboxItem } from '../../src/services/sync/outbox';
+import { StatsApi, supabaseStats } from '../../src/services/backend/statsApi';
+import { Telemetry } from '../../src/services/sync/telemetry';
 import { day, hop, MONDAY, newGame, result, runFor, saveWith } from '../helpers';
 
 const memory = (initial: string | null = null): KeyValue & { value: string | null } => {
@@ -183,6 +183,29 @@ describe('Outbox', () => {
     });
     expect(accepted).toEqual(['a', 'c']);
     expect(box.size).toBe(0);
+  });
+
+  it('sends rows added while a drain is already running', async () => {
+    const box = new Outbox(memory());
+    await box.add({ table: 'sessions', row: { id: 's1' } });
+    const sent: string[] = [];
+    const draining = box.drain(async (_t, rows) => {
+      if (rows[0].id === 's1') await box.add(runItem('late'));
+      sent.push(...rows.map((r) => r.id));
+      return 'ok';
+    });
+    await draining;
+    expect(sent).toEqual(['s1', 'late']);
+    expect(box.size).toBe(0);
+  });
+
+  it('adds several items with one write', async () => {
+    const kv = memory();
+    let writes = 0;
+    const counted = { get: kv.get, set: async (v: string) => void (writes++, await kv.set(v)) };
+    await new Outbox(counted).add(runItem('a'), runItem('b'), runItem('c'));
+    expect(writes).toBe(1);
+    expect(JSON.parse(kv.value!)).toHaveLength(3);
   });
 
   it('ignores corrupted storage', async () => {

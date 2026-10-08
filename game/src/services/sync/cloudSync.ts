@@ -1,6 +1,6 @@
-import { resolveSave, SaveSource, touch } from '../game/meta/sync';
-import type { Save } from '../game/meta/save';
-import type { CloudApi } from './cloudApi';
+import { resolveSave, SaveSource, touch } from '../../game/meta/sync';
+import type { Save } from '../../game/meta/save';
+import type { CloudApi } from '../backend/savesApi';
 
 export const PUSH_DELAY_MS = 2500;
 

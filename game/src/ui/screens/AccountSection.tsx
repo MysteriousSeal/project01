@@ -1,12 +1,12 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Account, AccountApi, AuthResult, EmailMode } from '../../services/account';
-import { appleAvailable, appleIdToken } from '../../services/appleAuth';
+import { Account, AccountApi, AuthResult, EmailMode } from '../../services/backend/accountApi';
+import { appleAvailable, appleIdToken } from '../../services/device/appleAuth';
 import { Button } from '../components/Button';
-import { Icon } from '../components/Icon';
 import { SectionLabel } from '../components/Page';
-import { C, CARD, RADIUS } from '../theme';
+import { SettingRow } from '../components/SettingRow';
+import { C, CARD, FIELD, RADIUS } from '../theme';
 
 type Props = { api: AccountApi; onSwitched: () => Promise<void>; beforeAuth: () => Promise<void> };
 
@@ -84,17 +84,17 @@ export function AccountSection({ api, onSwitched, beforeAuth }: Props) {
     <>
       <SectionLabel>ACCOUNT</SectionLabel>
       <View style={styles.card}>
-        <View style={styles.status}>
-          <Icon name={account.guest ? 'user-astronaut' : 'check'} size={18} color={account.guest ? C.gold : C.mint} style={styles.icon} />
-          <View style={styles.body}>
-            <Text style={styles.label}>{account.guest ? 'Guest account' : `Linked with ${linkedWith}`}</Text>
-            <Text style={styles.desc}>
-              {account.guest
-                ? 'Your progress is backed up, but only this phone can get it back. Link an account to keep it if you change phones.'
-                : `${account.email ? `${account.email}. ` : ''}Sign in with the same account on a new phone to restore your progress.`}
-            </Text>
-          </View>
-        </View>
+        <SettingRow
+          align="top"
+          icon={account.guest ? 'user-astronaut' : 'check'}
+          color={account.guest ? C.gold : C.mint}
+          label={account.guest ? 'Guest account' : `Linked with ${linkedWith}`}
+          desc={
+            account.guest
+              ? 'Your progress is backed up, but only this phone can get it back. Link an account to keep it if you change phones.'
+              : `${account.email ? `${account.email}. ` : ''}Sign in with the same account on a new phone to restore your progress.`
+          }
+        />
 
         {apple && !account.providers.includes('apple') && (
           <AppleAuthentication.AppleAuthenticationButton
@@ -150,14 +150,9 @@ export function AccountSection({ api, onSwitched, beforeAuth }: Props) {
 
 const styles = StyleSheet.create({
   card: { ...CARD, padding: 14, gap: 12 },
-  status: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  icon: { width: 26, textAlign: 'center', marginTop: 2 },
-  body: { flex: 1 },
-  label: { color: C.text, fontSize: 15, fontWeight: '800' },
-  desc: { color: C.dim, fontSize: 12, lineHeight: 17, marginTop: 3 },
   apple: { height: 46 },
   form: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  input: { flex: 1, color: C.text, fontSize: 15, fontWeight: '700', paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.sm, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line },
+  input: { ...FIELD, flex: 1 },
   codeInput: { letterSpacing: 6, fontVariant: ['tabular-nums'] },
   btn: { minWidth: 96, paddingVertical: 11 },
   message: { color: C.mint, fontSize: 12, fontWeight: '700', lineHeight: 17 },

@@ -1,9 +1,9 @@
 import { useEffect, useEffectEvent, useSyncExternalStore } from 'react';
-import { dayKey } from '../game/meta/calendar';
-import { challengeTypesFor } from '../game/meta/challengeTypes';
-import { allBoards, Board, BoardEntry, boardKey } from '../game/meta/stats';
-import { BoardStore } from './boardStore';
-import { supabase } from './supabase';
+import { dayKey } from '../../game/meta/calendar';
+import { challengeTypesFor } from '../../game/meta/challengeTypes';
+import { allBoards, Board, BoardEntry, boardKey } from '../../game/meta/stats';
+import { BoardStore } from '../sync/boardStore';
+import { supabase } from '../backend/client';
 import { statsApi } from './useTelemetry';
 
 export const boardStore = statsApi ? new BoardStore(statsApi) : null;

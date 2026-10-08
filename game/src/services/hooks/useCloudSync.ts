@@ -1,9 +1,9 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { AppState } from 'react-native';
-import type { Save } from '../game/meta/save';
-import { supabaseCloud } from './cloudApi';
-import { ChooseSave, CloudSync } from './cloudSync';
-import { supabase } from './supabase';
+import type { Save } from '../../game/meta/save';
+import { supabaseCloud } from '../backend/savesApi';
+import { ChooseSave, CloudSync } from '../sync/cloudSync';
+import { supabase } from '../backend/client';
 
 export const cloudEnabled = supabase !== null;
 

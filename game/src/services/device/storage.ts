@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { defaultSave, normalizeSave, Save } from '../game/meta/save';
+import { defaultSave, normalizeSave, Save } from '../../game/meta/save';
 
 const KEY = 'orbit-hop-save-v1';
 

@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
-import { Outbox } from './outbox';
-import { supabaseStats } from './statsApi';
-import { keyValue } from './storage';
-import { supabase } from './supabase';
-import { Telemetry } from './telemetry';
+import { Outbox } from '../sync/outbox';
+import { supabaseStats } from '../backend/statsApi';
+import { keyValue } from '../device/storage';
+import { supabase } from '../backend/client';
+import { Telemetry } from '../sync/telemetry';
 
 export const statsApi = supabase ? supabaseStats(supabase) : null;
 export const telemetry = statsApi ? new Telemetry(statsApi, new Outbox(keyValue('orbit-hop-outbox-v1')), Platform.OS) : null;

@@ -1,8 +1,8 @@
-import type { LedgerEntry } from '../game/meta/ledger';
-import type { RunRow, SessionRow } from '../game/meta/stats';
-import { isPlausibleRun, uuid } from '../game/meta/stats';
+import type { LedgerEntry } from '../../game/meta/ledger';
+import type { RunRow, SessionRow } from '../../game/meta/stats';
+import { isPlausibleRun, uuid } from '../../game/meta/stats';
 import { Outbox } from './outbox';
-import type { StatsApi } from './statsApi';
+import type { StatsApi } from '../backend/statsApi';
 
 export class Telemetry {
   private session: { id: string; started: number } | null = null;
@@ -36,7 +36,7 @@ export class Telemetry {
 
   async logLedger(entries: LedgerEntry[]) {
     if (!entries.length) return;
-    for (const row of entries) await this.outbox.add({ table: 'ledger', row });
+    await this.outbox.add(...entries.map((row) => ({ table: 'ledger' as const, row })));
     await this.flush();
   }
 

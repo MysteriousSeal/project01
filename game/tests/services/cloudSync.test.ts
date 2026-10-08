@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { normalizeSave, Save } from '../../src/game/meta/save';
 import { resolveSave, touch } from '../../src/game/meta/sync';
-import { CloudApi, supabaseCloud } from '../../src/services/cloudApi';
-import { CloudSync } from '../../src/services/cloudSync';
+import { CloudApi, supabaseCloud } from '../../src/services/backend/savesApi';
+import { CloudSync } from '../../src/services/sync/cloudSync';
 import { saveWith } from '../helpers';
 
 type Fake = CloudApi & { remote: Save | null; pushes: Save[]; online: boolean; userId: string | null };
