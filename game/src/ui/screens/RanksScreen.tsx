@@ -1,14 +1,16 @@
-import { useEffect, useEffectEvent, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { dayKey } from '../../game/meta/calendar';
 import { MEDAL_TIERS } from '../../game/meta/challenge';
 import { challengeTypesFor, statUnit } from '../../game/meta/challengeTypes';
 import { Save } from '../../game/meta/save';
 import { Board, BoardEntry, boardValue } from '../../game/meta/stats';
+import { useLeaderboard } from '../../services/useLeaderboards';
 import { statsApi } from '../../services/useTelemetry';
 import { Coin, Icon } from '../components/Icon';
 import { Page, SectionLabel } from '../components/Page';
-import { alpha, C, CARD, F, RADIUS } from '../theme';
+import { useReducedMotion } from '../hooks';
+import { alpha, C, CARD, F, GAP, RADIUS } from '../theme';
 
 type Scope = 'all' | 'week' | 'daily' | 'level' | 'games';
 const SCOPES: { id: Scope; label: string }[] = [
@@ -26,38 +28,36 @@ const HEADINGS: Record<Exclude<Scope, 'daily'>, string> = {
   games: 'MOST GAMES PLAYED',
 };
 
-type Loaded = { key: string; rows: BoardEntry[] | null };
-
-const boardKey = (b: Board) => (b.kind === 'daily' ? `daily:${b.day}:${b.type}` : b.kind);
+const SKELETON_ROWS = 6;
+const SLIDE_PX = 48;
 
 export function RanksScreen({ save }: { save: Save }) {
   const today = new Date();
   const types = challengeTypesFor(today);
+  const still = useReducedMotion();
   const [scope, setScope] = useState<Scope>('all');
   const [typeId, setTypeId] = useState(types[0].id);
   const [nonce, setNonce] = useState(0);
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [slide] = useState(() => new Animated.Value(0));
+  const lastOrder = useRef(0);
 
   const board: Board = scope === 'daily' ? { kind: 'daily', day: dayKey(today), type: typeId } : { kind: scope };
-  const key = `${boardKey(board)}#${nonce}`;
   const type = scope === 'daily' ? types.find((t) => t.id === typeId) : undefined;
   const coins = type?.stat === 'coins';
+  const order = SCOPES.findIndex((x) => x.id === scope) * 10 + (scope === 'daily' ? types.findIndex((t) => t.id === typeId) : 0);
 
-  const fetchBoard = useEffectEvent(() => statsApi?.leaderboard(board).catch(() => null) ?? Promise.resolve(null));
+  const cached = useLeaderboard(board, nonce);
 
   useEffect(() => {
-    if (!statsApi) return;
-    let alive = true;
-    fetchBoard().then((rows) => {
-      if (alive) setLoaded({ key, rows });
-    });
-    return () => {
-      alive = false;
-    };
-  }, [key]);
+    const dir = Math.sign(order - lastOrder.current);
+    lastOrder.current = order;
+    if (!dir || still) return;
+    slide.setValue(dir);
+    Animated.timing(slide, { toValue: 0, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [order, still, slide]);
 
-  const status = !statsApi ? 'offline' : loaded?.key !== key ? 'loading' : loaded.rows === null ? 'error' : loaded.rows.length ? 'ready' : 'empty';
-  const rows = status === 'ready' ? loaded!.rows! : [];
+  const status = !statsApi ? 'offline' : cached === undefined ? 'loading' : cached === null ? 'error' : cached.length ? 'ready' : 'empty';
+  const rows = status === 'ready' ? cached! : [];
   const me = rows.find((r) => r.me);
 
   const refresh = (
@@ -66,13 +66,18 @@ export function RanksScreen({ save }: { save: Save }) {
     </Pressable>
   );
 
+  const motion = {
+    opacity: slide.interpolate({ inputRange: [-1, 0, 1], outputRange: [0, 1, 0] }),
+    transform: [{ translateX: slide.interpolate({ inputRange: [-1, 0, 1], outputRange: [-SLIDE_PX, 0, SLIDE_PX] }) }],
+  };
+
   return (
     <Page save={save} title="Ranks" right={statsApi ? refresh : undefined}>
       <View style={styles.tabs} accessibilityRole="tablist">
-        {SCOPES.map((s) => (
-          <Pressable key={s.id} onPress={() => setScope(s.id)} style={[styles.tab, scope === s.id && styles.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: scope === s.id }}>
-            <Text style={[styles.tabTxt, scope === s.id && styles.tabTxtOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              {s.label}
+        {SCOPES.map((x) => (
+          <Pressable key={x.id} onPress={() => setScope(x.id)} style={[styles.tab, scope === x.id && styles.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: scope === x.id }}>
+            <Text style={[styles.tabTxt, scope === x.id && styles.tabTxtOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {x.label}
             </Text>
           </Pressable>
         ))}
@@ -89,26 +94,42 @@ export function RanksScreen({ save }: { save: Save }) {
         </View>
       )}
 
-      <SectionLabel>
-        {scope === 'daily' ? `TODAY · RANKED BY ${type ? statUnit(type).toUpperCase() : 'SCORE'}` : HEADINGS[scope]}
-        {me ? `  ·  YOU ARE #${me.rank}` : ''}
-      </SectionLabel>
+      <Animated.View style={[styles.list, motion]}>
+        <SectionLabel>
+          {scope === 'daily' ? `TODAY · RANKED BY ${type ? statUnit(type).toUpperCase() : 'SCORE'}` : HEADINGS[scope]}
+          {me ? `  ·  YOU ARE #${me.rank}` : ''}
+        </SectionLabel>
 
-      {status === 'offline' && <Note icon="wifi" text="Leaderboards need an online connection to the game server." />}
-      {status === 'loading' && <Note icon="rotate-right" text="Loading ranks…" />}
-      {status === 'error' && <Note icon="wifi" text="Couldn't load ranks. Check your connection and tap refresh." />}
-      {status === 'empty' && <Note icon="trophy" text="No scores yet. Play a run to take the top spot!" />}
+        {status === 'offline' && <Note icon="wifi" text="Leaderboards need an online connection to the game server." />}
+        {status === 'loading' && <Skeleton />}
+        {status === 'error' && <Note icon="wifi" text="Couldn't load ranks. Check your connection and tap refresh." />}
+        {status === 'empty' && <Note icon="trophy" text="No scores yet. Play a run to take the top spot!" />}
 
-      {rows.map((r, i) => {
-        const gap = i > 0 && r.rank - rows[i - 1].rank > 1 && r.me;
-        return (
-          <View key={`${r.rank}-${r.name}-${i}`}>
-            {gap && <Text style={styles.gap}>⋯</Text>}
-            <Row entry={r} board={board} coins={coins} />
-          </View>
-        );
-      })}
+        {rows.map((r, i) => {
+          const gap = i > 0 && r.rank - rows[i - 1].rank > 1 && r.me;
+          return (
+            <View key={`${r.rank}-${r.name}-${i}`}>
+              {gap && <Text style={styles.gap}>⋯</Text>}
+              <Row entry={r} board={board} coins={coins} />
+            </View>
+          );
+        })}
+      </Animated.View>
     </Page>
+  );
+}
+
+function Skeleton() {
+  return (
+    <View style={styles.list} accessible accessibilityLabel="Loading ranks">
+      {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+        <View key={i} style={[styles.row, { opacity: 1 - i * 0.13 }]} importantForAccessibility="no-hide-descendants">
+          <View style={styles.rank} />
+          <View style={[styles.bar, { width: `${55 - (i % 3) * 10}%` }]} />
+          <View style={[styles.bar, styles.barValue]} />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -164,5 +185,8 @@ const styles = StyleSheet.create({
   sub: { color: C.dim, fontFamily: F.mono, fontSize: 10, fontWeight: '700' },
   gap: { color: C.dim, textAlign: 'center', fontSize: 16, lineHeight: 16 },
   note: { gap: 10 },
+  list: { gap: GAP },
+  bar: { height: 10, borderRadius: 5, backgroundColor: C.track },
+  barValue: { width: 42, marginLeft: 'auto' },
   noteTxt: { flex: 1, color: C.dim, fontSize: 13, fontWeight: '600', lineHeight: 18 },
 });

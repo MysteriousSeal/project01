@@ -15,6 +15,7 @@ import { loadSave, writeSave } from './src/services/storage';
 import { supabaseAccount } from './src/services/account';
 import { supabase } from './src/services/supabase';
 import { useCloudSync } from './src/services/useCloudSync';
+import { usePrefetchLeaderboards } from './src/services/useLeaderboards';
 import { AccountSection } from './src/ui/screens/AccountSection';
 import { telemetry, useTelemetry } from './src/services/useTelemetry';
 import { ChangeReason, diffLedger, openingEntry } from './src/game/meta/ledger';
@@ -76,6 +77,7 @@ export default function App() {
 
   const switchAccount = useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
   useTelemetry(save?.name ?? '');
+  usePrefetchLeaderboards();
 
   const needsOpening = save !== null && !save.ledgerStarted && telemetry !== null;
   const startLedger = useEffectEvent(() => {

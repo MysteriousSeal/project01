@@ -24,6 +24,16 @@ export type Board = { kind: 'all' } | { kind: 'week' } | { kind: 'level' } | { k
 
 export type BoardEntry = { rank: number; name: string; value: number; me: boolean };
 
+export const boardKey = (b: Board) => (b.kind === 'daily' ? `daily:${b.day}:${b.type}` : b.kind);
+
+export const allBoards = (day: string, dailyTypes: string[]): Board[] => [
+  { kind: 'all' },
+  { kind: 'week' },
+  { kind: 'level' },
+  { kind: 'games' },
+  ...dailyTypes.map((type) => ({ kind: 'daily' as const, day, type })),
+];
+
 export function boardValue(board: Board, value: number, coins = false): { main: string; sub: string | null } {
   if (board.kind === 'level') {
     const { lvl } = levelInfo(value);
