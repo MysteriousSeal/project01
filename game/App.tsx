@@ -27,6 +27,7 @@ import { GameScreen } from './src/ui/screens/game/GameScreen';
 import { HomeScreen } from './src/ui/screens/HomeScreen';
 import { RanksScreen } from './src/ui/screens/RanksScreen';
 import { SettingsScreen } from './src/ui/screens/SettingsScreen';
+import { TrophiesScreen } from './src/ui/screens/TrophiesScreen';
 import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
 import { C } from './src/ui/theme';
 
@@ -60,6 +61,7 @@ export default function App() {
   const { width, height } = useWindowDimensions();
   const [save, setSave] = useState<Save | null>(null);
   const [tab, setTab] = useState<TabId>('home');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [run, setRun] = useState<Run | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
@@ -98,12 +100,13 @@ export default function App() {
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!inMenu) setRun(null);
+      else if (settingsOpen) setSettingsOpen(false);
       else if (tab !== 'home') setTab('home');
       else return false;
       return true;
     });
     return () => sub.remove();
-  }, [inMenu, tab]);
+  }, [inMenu, tab, settingsOpen]);
 
   if (!save) return <View style={styles.root} />;
 
@@ -114,6 +117,7 @@ export default function App() {
 
   const goTab = (t: TabId) => {
     setTab(t);
+    setSettingsOpen(false);
     setRun(null);
     setOutcome(null);
   };
@@ -160,12 +164,14 @@ export default function App() {
       {!run && (
         <>
           <View style={styles.page}>
-            {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
-            {tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
-            {tab === 'ranks' && <RanksScreen save={save} />}
-            {tab === 'shop' && <ShopScreen save={save} onChange={(next) => update(next, { source: 'shop' })} />}
-            {tab === 'settings' && (
+            {!settingsOpen && tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} onSettings={() => setSettingsOpen(true)} />}
+            {!settingsOpen && tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
+            {!settingsOpen && tab === 'ranks' && <RanksScreen save={save} />}
+            {!settingsOpen && tab === 'shop' && <ShopScreen save={save} onChange={(next) => update(next, { source: 'shop' })} />}
+            {!settingsOpen && tab === 'trophies' && <TrophiesScreen save={save} />}
+            {settingsOpen && (
               <SettingsScreen
+                onBack={() => setSettingsOpen(false)}
                 save={save}
                 onChange={(settings) => update({ ...save, settings })}
                 onRename={(name) => update({ ...save, name })}
@@ -175,7 +181,7 @@ export default function App() {
               />
             )}
           </View>
-          <TabBar tab={tab} onChange={setTab} badges={{ daily: dailyBadge }} />
+          <TabBar tab={tab} onChange={goTab} badges={{ daily: dailyBadge }} />
         </>
       )}
       {run && outcome && (

@@ -21,6 +21,7 @@ export type Rules = {
   powerups: boolean;
   coinChance: number;
   goldChance: number;
+  cometChance: number;
 };
 
 export const DEFAULT_RULES: Rules = {
@@ -34,6 +35,7 @@ export const DEFAULT_RULES: Rules = {
   powerups: true,
   coinChance: 0.65,
   goldChance: 0.12,
+  cometChance: 0.12,
 };
 
 export type Mods = { fuseBonus: number; magnetTime: number; feverTime: number; powerChance: number; startShield: boolean; coinMultiplier: number };
@@ -70,9 +72,12 @@ export type Planet = {
   ring: boolean;
   gapAngle: number;
   gapSpin: number;
+  /** Direction (-1 or 1) of the comet that crosses after landing here, or 0 for none. */
+  comet: number;
 };
 
 export type Coin = { x: number; y: number; taken: boolean };
+export type Comet = { x: number; y: number; vx: number; taken: boolean };
 export type PowerKind = 'shield' | 'magnet';
 export type PowerUp = { x: number; y: number; kind: PowerKind; taken: boolean };
 
@@ -87,7 +92,7 @@ export const inGap = (p: Planet, x: number, y: number) => Math.abs(angleDiff(Mat
 
 export function makePlanet(rng: Rng, idx: number, prev: Planet | null, W: number, fuseBonus: number, rules: Rules = DEFAULT_RULES): Planet {
   const spin = (rng() < 0.5 ? -1 : 1) * (between(rng, 1.7, 2.3) + Math.min(idx * 0.04, 1.4));
-  const base = { idx, spin, hue: planetHue(idx), movePhase: between(rng, 0, Math.PI * 2), gapAngle: 0, gapSpin: 0 };
+  const base = { idx, spin, hue: planetHue(idx), movePhase: between(rng, 0, Math.PI * 2), gapAngle: 0, gapSpin: 0, comet: 0 };
 
   if (prev && isBossIndex(idx, rules.bossEvery)) {
     const r = WORLD.bossRadius;
@@ -109,6 +114,15 @@ export function makePlanet(rng: Rng, idx: number, prev: Planet | null, W: number
   const moveChance = rules.moveChance ?? Math.min(0.15 + idx * 0.01, 0.5);
   const moveAmp = idx >= rules.movingFrom && rng() < moveChance ? between(rng, 30, Math.min(W / 2 - margin, 90)) : 0;
   return { ...base, x, baseX: x, y, r, orbit, fuse: fuseMax, fuseMax, moveAmp, gold: idx > 3 && rng() < rules.goldChance, boss: false, ring: false };
+}
+
+export const COMET_FROM = 5;
+
+/** Comets use their own generator so they never shift the planet layout of seeded runs. */
+export function cometFor(rng: Rng, p: Planet, rules: Rules = DEFAULT_RULES) {
+  const roll = rng();
+  const side = rng() < 0.5 ? -1 : 1;
+  return p.idx >= COMET_FROM && !p.boss && !isBossIndex(p.idx + 1, rules.bossEvery) && roll < rules.cometChance ? side : 0;
 }
 
 export function pickupFor(rng: Rng, from: Planet, to: Planet, powerChance: number, rules: Rules = DEFAULT_RULES): { coin?: Coin; power?: PowerUp } {

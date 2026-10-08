@@ -4,12 +4,15 @@ import type { RunReport } from '../../game/meta/progress';
 import { Button } from '../components/Button';
 import { slotOf } from '../../game/meta/challenge';
 import { ChallengeRow } from '../components/ChallengeRow';
-import { Coin } from '../components/Icon';
+import { Coin, Icon } from '../components/Icon';
 import { MissionsCard } from '../components/MissionsCard';
 import { NextUnlock } from '../components/NextUnlock';
 import { TopBar } from '../components/TopBar';
 import { useCompact } from '../hooks';
+import { TROPHY_TIERS } from '../../game/meta/trophies';
 import { BOTTOM_INSET, C, F, FILL, fmt, GAP, GUTTER, RADIUS } from '../theme';
+
+const MAX_TROPHY_BADGES = 2;
 
 type Props = { result: RunResult; report: RunReport; onRetry: () => void; onHome: () => void; onShop: () => void };
 
@@ -29,6 +32,13 @@ export function GameOverScreen({ result, report, onRetry, onHome, onShop }: Prop
           {daily && daily.reward > 0 && <Text style={[styles.badge, { backgroundColor: C.gold }]}><Coin color={C.space} size={13} /> +{daily.reward}</Text>}
           {report.newBest && <Text style={[styles.badge, { backgroundColor: C.gold }]}>NEW BEST!</Text>}
           {leveled && <Text style={[styles.badge, { backgroundColor: C.sky }]}>LEVEL {report.levelAfter}  <Coin color={C.space} size={13} /> +{report.levelReward}</Text>}
+          {report.toBest !== null && <Text style={[styles.badge, { backgroundColor: C.pink }]}>SO CLOSE · {report.toBest} FROM BEST</Text>}
+          {report.trophies.slice(0, MAX_TROPHY_BADGES).map((u) => (
+            <Text key={`${u.trophy.id}${u.tier}`} style={[styles.badge, { backgroundColor: TROPHY_TIERS[u.tier - 1].color }]}>
+              <Icon name="trophy" size={12} color={C.space} /> {u.trophy.name.toUpperCase()}  <Coin color={C.space} size={13} /> +{u.reward}
+            </Text>
+          ))}
+          {report.trophies.length > MAX_TROPHY_BADGES && <Text style={[styles.badge, { backgroundColor: C.gold }]}>+{report.trophies.length - MAX_TROPHY_BADGES} TROPHIES</Text>}
         </View>
         <View style={styles.scoreBox} accessible accessibilityLabel={`Score ${result.score}. Best ${save.best}.`}>
           <Text style={[styles.big, compact && styles.bigCompact]}>{result.score}</Text>

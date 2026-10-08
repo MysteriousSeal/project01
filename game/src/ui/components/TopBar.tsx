@@ -3,9 +3,9 @@ import { levelInfo } from '../../game/meta/progress';
 import { Save } from '../../game/meta/save';
 import { C, F, fmt, GUTTER, RADIUS, TOP_INSET } from '../theme';
 import { ProgressBar } from './ProgressBar';
-import { Coin } from './Icon';
+import { Coin, Icon } from './Icon';
 
-export function TopBar({ save, onShop }: { save: Save; onShop?: () => void }) {
+export function TopBar({ save, onShop, onSettings }: { save: Save; onShop?: () => void; onSettings?: () => void }) {
   const { lvl, into, need } = levelInfo(save.xp);
   const wallet = (
     <>
@@ -24,7 +24,14 @@ export function TopBar({ save, onShop }: { save: Save; onShop?: () => void }) {
           {wallet}
         </Pressable>
       ) : (
-        <View style={styles.row}>{wallet}</View>
+        <View style={styles.row}>
+          {wallet}
+          {onSettings && (
+            <Pressable onPress={onSettings} hitSlop={10} style={({ pressed }) => [styles.gear, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Settings">
+              <Icon name="gear" size={17} color={C.soft} />
+            </Pressable>
+          )}
+        </View>
       )}
     </View>
   );
@@ -35,5 +42,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lvl: { color: C.text, fontSize: 15, fontWeight: '700', fontFamily: F.mono },
   wallet: { color: C.gold, fontSize: 18, fontWeight: '700', fontFamily: F.mono },
+  gear: { width: 34, height: 34, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, marginLeft: 4 },
+  pressed: { opacity: 0.7 },
   shop: { color: C.space, backgroundColor: C.gold, fontWeight: '900', fontSize: 13, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm, overflow: 'hidden' },
 });

@@ -6,13 +6,13 @@ import { Page, SectionLabel } from '../components/Page';
 import { SettingRow } from '../components/SettingRow';
 import { alpha, C, CARD, FIELD } from '../theme';
 
-type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; account?: ReactNode };
+type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; account?: ReactNode; onBack: () => void };
 
 export const DEV_COINS = 100;
 
 const OFF_TRACK = alpha(C.text, 0.15);
 
-export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAttempts, account }: Props) {
+export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAttempts, account, onBack }: Props) {
   const { settings } = save;
   const [draft, setDraft] = useState(save.name);
   const [invalid, setInvalid] = useState(false);
@@ -30,7 +30,7 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
   };
 
   return (
-    <Page save={save} title="Settings">
+    <Page save={save} title="Settings" onBack={onBack}>
       <SectionLabel>PROFILE</SectionLabel>
       <View style={styles.card}>
         <SettingRow

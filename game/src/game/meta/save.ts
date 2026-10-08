@@ -4,6 +4,7 @@ import { BOOSTS, MAX_BOOST_STACK } from './boosts';
 import { CATALOG, COSMETIC_KINDS, DEFAULT_COSMETIC } from './cosmetics';
 import { parseTrack, Track } from '../sim/ghost';
 import { Mission, MISSION_KINDS, MISSION_SLOTS } from './missions';
+import { emptyStats, LifetimeStats, MAX_TROPHY_TIER, STAT_KEYS, TROPHIES } from './trophies';
 import { maxLevel, UPGRADES } from './upgrades';
 
 export type Save = {
@@ -31,6 +32,9 @@ export type Save = {
   savedAt: number;
   name: string;
   ledgerStarted: boolean;
+  stats: LifetimeStats;
+  /** Highest tier earned per trophy id. */
+  trophies: Record<string, number>;
 };
 
 export type Settings = { ghost: boolean };
@@ -62,6 +66,8 @@ export const defaultSave = (): Save => ({
   savedAt: 0,
   name: '',
   ledgerStarted: false,
+  stats: emptyStats(),
+  trophies: {},
 });
 
 type Raw = Record<string, unknown>;
@@ -115,6 +121,23 @@ function settings(raw: unknown): Settings {
   return { ghost: s.ghost === true };
 }
 
+function stats(raw: unknown): LifetimeStats {
+  const r = raw && typeof raw === 'object' ? (raw as Raw) : {};
+  const out = emptyStats();
+  for (const k of STAT_KEYS) out[k] = count(r[k]);
+  return out;
+}
+
+function trophies(raw: unknown): Record<string, number> {
+  const r = raw && typeof raw === 'object' ? (raw as Raw) : {};
+  const out: Record<string, number> = {};
+  for (const t of TROPHIES) {
+    const tier = Math.min(count(r[t.id]), MAX_TROPHY_TIER);
+    if (tier) out[t.id] = tier;
+  }
+  return out;
+}
+
 export function normalizeSave(input: unknown): Save {
   const base = defaultSave();
   if (!input || typeof input !== 'object') return base;
@@ -165,5 +188,7 @@ export function normalizeSave(input: unknown): Save {
     savedAt: count(r.savedAt),
     name: cleanName(text(r.name)) ?? '',
     ledgerStarted: r.ledgerStarted === true,
+    stats: stats(r.stats),
+    trophies: trophies(r.trophies),
   };
 }

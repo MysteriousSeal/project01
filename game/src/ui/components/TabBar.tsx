@@ -2,14 +2,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F } from '../theme';
 import { Icon, IconName } from './Icon';
 
-export type TabId = 'home' | 'daily' | 'ranks' | 'shop' | 'settings';
+export type TabId = 'home' | 'daily' | 'ranks' | 'shop' | 'trophies';
 
 const TABS: { id: TabId; label: string; icon: IconName }[] = [
   { id: 'daily', label: 'Daily', icon: 'calendar-day' },
-  { id: 'ranks', label: 'Ranks', icon: 'trophy' },
+  { id: 'ranks', label: 'Ranks', icon: 'ranking-star' },
   { id: 'home', label: 'Home', icon: 'house' },
   { id: 'shop', label: 'Shop', icon: 'cart-shopping' },
-  { id: 'settings', label: 'Settings', icon: 'gear' },
+  { id: 'trophies', label: 'Trophies', icon: 'trophy' },
 ];
 
 export const TAB_BAR_HEIGHT = 78;

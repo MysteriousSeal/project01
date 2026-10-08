@@ -27,7 +27,13 @@ export type IconName =
   | 'trophy'
   | 'rotate-right'
   | 'wifi'
-  | 'user-astronaut';
+  | 'user-astronaut'
+  | 'earth-americas'
+  | 'compass'
+  | 'meteor'
+  | 'gamepad'
+  | 'ranking-star'
+  | 'chevron-left';
 
 type Props = { name: IconName; size?: number; color?: string; style?: StyleProp<TextStyle> };
 

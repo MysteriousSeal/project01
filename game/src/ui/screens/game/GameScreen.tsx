@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Skin, Theme, TrailStyle } from '../../../game/meta/cosmetics';
 import { RunConfig } from '../../../game/meta/session';
 import { hsl } from '../../../game/palette';
-import { createState, GameEvent, ghostActive, isSettled, launchDir, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, zoneOf } from '../../../game/sim/engine';
+import { Comet, createState, GameEvent, ghostActive, isSettled, launchDir, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, zoneOf } from '../../../game/sim/engine';
 import { seededRng } from '../../../game/sim/rng';
 import { Ball } from '../../components/Ball';
 import { Coin, Icon } from '../../components/Icon';
@@ -25,6 +25,7 @@ type Props = {
 };
 
 const END_DELAY = 0.7;
+const COMET_SEED = 7919;
 const MAX_DT = 1 / 30;
 
 function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd']) {
@@ -59,9 +60,14 @@ function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'])
 }
 
 export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onEnd }: Props) {
-  const [g] = useState(() =>
-    createState(W, H, { bestIdx: config.bestIdx, mods: config.mods, rules: config.rules, ghost: config.ghost, headStart: config.headStart, rng: config.seed === undefined ? Math.random : seededRng(config.seed) }),
-  );
+  const [g] = useState(() => {
+    const seeded = config.seed !== undefined;
+    return createState(W, H, {
+      bestIdx: config.bestIdx, mods: config.mods, rules: config.rules, ghost: config.ghost, headStart: config.headStart,
+      rng: seeded ? seededRng(config.seed!) : Math.random,
+      cometRng: seeded ? seededRng(config.seed! + COMET_SEED) : Math.random,
+    });
+  });
   useGameLoop(g, onEvent, onEnd);
 
   const shake = g.shake ? { transform: [{ translateX: g.shakeX }, { translateY: g.shakeY }] } : null;
@@ -99,6 +105,8 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
         )}
 
         {g.coins.map((c, i) => (c.taken ? null : <View key={`c${i}`} style={[styles.coin, { left: c.x - 9, top: c.y - cy - 9, transform: [{ scaleX: Math.abs(Math.cos(g.t * 3 + i)) * 0.7 + 0.3 }] }]} />))}
+
+        {g.comets.map((c, i) => (c.taken ? null : <CometView key={`m${i}`} c={c} top={c.y - cy} t={g.t} />))}
 
         {g.powerups.map((u, i) =>
           u.taken ? null : (
@@ -140,7 +148,24 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
   );
 }
 
+const COMET_TAIL = 7;
+
+function CometView({ c, top, t }: { c: Comet; top: number; t: number }) {
+  const back = -Math.sign(c.vx);
+  return (
+    <>
+      {Array.from({ length: COMET_TAIL }, (_, i) => {
+        const k = 1 - (i + 1) / (COMET_TAIL + 1);
+        const size = 4 + 10 * k;
+        return <View key={i} style={[styles.abs, { left: c.x + back * (i + 1) * 11 - size / 2, top: top - size / 2 + Math.sin(t * 20 + i) * 1.5, width: size, height: size, borderRadius: size, backgroundColor: i < 2 ? C.text : C.sky, opacity: 0.85 * k }]} />;
+      })}
+      <View style={[styles.comet, { left: c.x - 11, top: top - 11 }]} />
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  comet: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: C.text, borderWidth: 3, borderColor: C.sky, shadowColor: C.sky, shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
   abs: { position: 'absolute' },
   aim: { position: 'absolute', width: 5, height: 5, borderRadius: 3 },
   coin: { position: 'absolute', width: 18, height: 18, borderRadius: 9, backgroundColor: C.gold, borderWidth: 2, borderColor: C.goldDeep },

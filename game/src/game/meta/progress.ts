@@ -5,6 +5,7 @@ import type { Rng } from '../sim/rng';
 import { trackBest } from '../sim/ghost';
 import type { Save } from './save';
 import type { RunMode } from './session';
+import { addRunStats, awardTrophies, TrophyUnlock } from './trophies';
 
 export const xpForLevel = (lvl: number) => 80 + lvl * 40;
 
@@ -38,7 +39,21 @@ export type RunReport = {
   completed: Mission[];
   shown: Mission[];
   newBest: boolean;
+  /** Points short of the personal best when the run came close, otherwise null. */
+  toBest: number | null;
+  trophies: TrophyUnlock[];
   challenge?: ChallengeOutcome;
+};
+
+/** A run "came close" when it lands within 10% (at least 2 points) of a meaningful best. */
+export function shortOfBest(score: number, best: number) {
+  const gap = best - score;
+  return best >= 10 && score > 0 && gap > 0 && gap <= Math.max(2, Math.ceil(best * 0.1)) ? gap : null;
+}
+
+const withTrophies = (save: Save) => {
+  const { save: next, unlocked } = awardTrophies(save);
+  return { save: next, trophies: unlocked };
 };
 
 export type ApplyOptions = { mode?: RunMode; challenge?: string; rng?: Rng; now?: Date };
@@ -52,13 +67,16 @@ export function applyRun(save: Save, r: RunResult, { mode = 'normal', challenge:
   const levelAfter = levelInfo(xp).lvl;
   const levelReward = levelUpReward(levelBefore, levelAfter);
   const missionCoins = completed.reduce((a, m) => a + m.reward, 0);
-  const base: Save = { ...save, xp, wallet: save.wallet + r.coins + missionCoins + levelReward, games: save.games + 1, missions: shown.filter((m) => !isDone(m)) };
+  const base: Save = {
+    ...save, xp, wallet: save.wallet + r.coins + missionCoins + levelReward, games: save.games + 1,
+    missions: shown.filter((m) => !isDone(m)), stats: addRunStats(save.stats, r),
+  };
   const report = { xpGained, levelBefore, levelAfter, levelReward, completed, shown };
 
   if (mode === 'daily') {
     const recorded = recordChallenge(save.challenges, type, r, now);
     const next = ensureMissions(recorded ? { ...base, challenges: recorded.challenges, wallet: base.wallet + recorded.outcome.reward } : base, rng);
-    return { ...report, save: next, newBest: false, challenge: recorded?.outcome };
+    return { ...report, ...withTrophies(next), newBest: false, toBest: null, challenge: recorded?.outcome };
   }
 
   const betterGhost = r.planets > trackBest(save.ghost);
@@ -66,5 +84,5 @@ export function applyRun(save: Save, r: RunResult, { mode = 'normal', challenge:
     { ...base, best: Math.max(save.best, r.score), bestPlanet: Math.max(save.bestPlanet, r.planets), ghost: betterGhost ? r.landings : save.ghost },
     rng,
   );
-  return { ...report, save: next, newBest: r.score > save.best && r.score > 0 };
+  return { ...report, ...withTrophies(next), newBest: r.score > save.best && r.score > 0, toBest: shortOfBest(r.score, save.best) };
 }

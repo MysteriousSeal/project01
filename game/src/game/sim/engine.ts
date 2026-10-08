@@ -1,10 +1,10 @@
 import { MAX_TRACK, Track, TRACK_END } from './ghost';
 import { C, hsl } from '../palette';
 import { between, type Rng } from './rng';
-import { Coin, DEFAULT_MODS, DEFAULT_RULES, inGap, makePlanet, Mods, pickupFor, Planet, PowerKind, PowerUp, Rules, zoneIndex, ZONES } from './world';
+import { Coin, Comet, cometFor, DEFAULT_MODS, DEFAULT_RULES, inGap, makePlanet, Mods, pickupFor, Planet, PowerKind, PowerUp, Rules, zoneIndex, ZONES } from './world';
 
 export { DEFAULT_MODS, DEFAULT_RULES, inGap, isBossIndex, WORLD, zoneIndex, zoneOf, ZONES } from './world';
-export type { Coin, Mods, Planet, PowerKind, PowerUp, Rules } from './world';
+export type { Coin, Comet, Mods, Planet, PowerKind, PowerUp, Rules } from './world';
 
 export const TUNING = {
   launchSpeed: 780,
@@ -29,27 +29,45 @@ export const TUNING = {
   bossCoins: 15,
   slowmoTime: 1.2,
   slowmoScale: 0.35,
+  cometSpeed: 220,
+  cometRadius: 38,
+  cometCoins: 10,
+  cometSlowmo: 0.8,
 } as const;
 
 export type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number };
 export type Popup = { x: number; y: number; text: string; life: number; color: string; coins?: boolean };
 
-export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost';
+export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost' | 'comet';
 
 export type DeathReason = 'lost' | 'collapse';
 
-export type RunResult = { score: number; coins: number; perfects: number; bestCombo: number; planets: number; landings: Track; time: number; death: DeathReason | null };
+export type RunResult = {
+  score: number;
+  coins: number;
+  perfects: number;
+  bestCombo: number;
+  planets: number;
+  bosses: number;
+  comets: number;
+  fevers: number;
+  landings: Track;
+  time: number;
+  death: DeathReason | null;
+};
 
 export type State = {
   W: number;
   H: number;
   rng: Rng;
   fx: Rng;
+  cometRng: Rng;
   mods: Mods;
   rules: Rules;
   planets: Planet[];
   coins: Coin[];
   powerups: PowerUp[];
+  comets: Comet[];
   particles: Particle[];
   popups: Popup[];
   trail: { x: number; y: number }[];
@@ -68,6 +86,9 @@ export type State = {
   perfects: number;
   combo: number;
   bestCombo: number;
+  bosses: number;
+  cometsRun: number;
+  fevers: number;
   fever: number;
   magnet: number;
   shield: boolean;
@@ -90,16 +111,19 @@ export type State = {
 
 export const POWER_COLOR: Record<PowerKind, string> = { shield: C.cyan, magnet: C.pink };
 
-export type CreateOptions = { bestIdx?: number; mods?: Mods; rules?: Rules; rng?: Rng; fx?: Rng; ghost?: Track; headStart?: number };
+const NO_COMETS: Rng = () => 1;
 
-export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_MODS, rules = DEFAULT_RULES, rng = Math.random, fx = Math.random, ghost = [], headStart = 0 }: CreateOptions = {}): State {
+/** `cometRng` is opt-in so simulations without one stay comet-free and deterministic. */
+export type CreateOptions = { bestIdx?: number; mods?: Mods; rules?: Rules; rng?: Rng; fx?: Rng; cometRng?: Rng; ghost?: Track; headStart?: number };
+
+export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_MODS, rules = DEFAULT_RULES, rng = Math.random, fx = Math.random, cometRng = NO_COMETS, ghost = [], headStart = 0 }: CreateOptions = {}): State {
   const first = makePlanet(rng, 0, null, W, 0, rules);
   const s: State = {
-    W, H, rng, fx, mods, rules,
-    planets: [first], coins: [], powerups: [], particles: [], popups: [], trail: [], events: [],
+    W, H, rng, fx, cometRng, mods, rules,
+    planets: [first], coins: [], powerups: [], comets: [], particles: [], popups: [], trail: [], events: [],
     cur: 0, ang: -Math.PI / 2, bx: 0, by: 0, vx: 0, vy: 0, flying: false, flyT: 0,
     camY: first.y - H * TUNING.cameraAnchor,
-    score: 0, coinsRun: 0, perfects: 0, combo: 0, bestCombo: 0,
+    score: 0, coinsRun: 0, perfects: 0, combo: 0, bestCombo: 0, bosses: 0, cometsRun: 0, fevers: 0,
     fever: 0, magnet: 0, shield: mods.startShield && rules.powerups, slowmo: 0, bestIdx, zone: 0,
     ghost, ghostPtr: 0, ghostIdx: 0, ghostDone: ghost.length === 0, ghostAhead: false, landings: [],
     dead: false, deathReason: null, t: 0, shake: 0, shakeX: 0, shakeY: 0,
@@ -128,7 +152,10 @@ export const launchDir = (s: State) => {
   return { x: -Math.sin(s.ang) * dir, y: Math.cos(s.ang) * dir };
 };
 
-export const runResult = (s: State): RunResult => ({ score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur, landings: s.landings, time: s.t, death: s.deathReason });
+export const runResult = (s: State): RunResult => ({
+  score: s.score, coins: s.coinsRun, perfects: s.perfects, bestCombo: s.bestCombo, planets: s.cur,
+  bosses: s.bosses, comets: s.cometsRun, fevers: s.fevers, landings: s.landings, time: s.t, death: s.deathReason,
+});
 
 export const isSettled = (s: State) => s.dead && s.particles.length === 0 && s.popups.length === 0;
 export const ghostActive = (s: State) => !s.ghostDone;
@@ -144,6 +171,7 @@ function ensurePlanets(s: State) {
   while (last.y > s.camY - s.H * 0.6 || last.idx < s.cur + TUNING.planetsAhead) {
     const p = makePlanet(s.rng, last.idx + 1, last, s.W, s.mods.fuseBonus, s.rules);
     const { coin, power } = pickupFor(s.rng, last, p, s.mods.powerChance, s.rules);
+    p.comet = cometFor(s.cometRng, p, s.rules);
     if (coin) s.coins.push(coin);
     if (power) s.powerups.push(power);
     s.planets.push(p);
@@ -153,6 +181,7 @@ function ensurePlanets(s: State) {
   retain(s.planets, (p) => p.y < cutoff || p.idx === s.cur);
   retain(s.coins, (c) => c.y < cutoff && !c.taken);
   retain(s.powerups, (u) => u.y < cutoff && !u.taken);
+  retain(s.comets, (c) => !c.taken && c.x > -60 && c.x < s.W + 60);
 }
 
 function addCoins(s: State, n: number) {
@@ -221,6 +250,7 @@ export function tap(s: State) {
 
 function clearBoss(s: State, p: Planet) {
   p.ring = false;
+  s.bosses += 1;
   s.score += TUNING.bossBonus;
   const bossCoins = addCoins(s, TUNING.bossCoins);
   s.slowmo = TUNING.slowmoTime;
@@ -230,6 +260,26 @@ function clearBoss(s: State, p: Planet) {
   burst(s, p.x, p.y, C.gold, 40, 380);
   burst(s, p.x, p.y, C.pink, 24, 300);
   s.events.push('boss');
+}
+
+function launchComet(s: State, p: Planet) {
+  const next = planetOf(s, p.idx + 1);
+  const dir = p.comet;
+  p.comet = 0;
+  s.comets.push({ x: dir > 0 ? -40 : s.W + 40, y: (p.y + next.y) / 2, vx: dir * TUNING.cometSpeed, taken: false });
+}
+
+function catchComet(s: State, c: Comet) {
+  c.taken = true;
+  s.cometsRun += 1;
+  const coins = addCoins(s, TUNING.cometCoins);
+  s.slowmo = Math.max(s.slowmo, TUNING.cometSlowmo);
+  s.shake = Math.max(s.shake, 10);
+  banner(s, 0.3, 'COMET!', C.sky, 1.4);
+  popup(s, c.x, c.y - 24, `+${coins}`, C.gold, 1.2, true);
+  burst(s, c.x, c.y, C.sky, 30, 340);
+  burst(s, c.x, c.y, C.gold, 16, 260);
+  s.events.push('comet');
 }
 
 const isPerfectApproach = (s: State, p: Planet) => Math.abs((s.vx * (p.y - s.by) - s.vy * (p.x - s.bx)) / TUNING.launchSpeed) < p.r * TUNING.perfectRatio;
@@ -246,6 +296,7 @@ function land(s: State, p: Planet) {
   record(s, p.idx);
 
   if (p.ring) clearBoss(s, p);
+  if (p.comet) launchComet(s, p);
 
   if (p.gold) {
     p.gold = false;
@@ -264,6 +315,7 @@ function land(s: State, p: Planet) {
     s.shake = Math.max(s.shake, 5);
     s.events.push('perfect');
     if (s.combo % s.rules.feverEvery === 0) {
+      s.fevers += 1;
       s.fever = s.mods.feverTime + s.rules.feverBonus;
       s.shake = 12;
       banner(s, 0.42, 'FEVER!', C.pink, 1.3);
@@ -354,6 +406,9 @@ function collectPickups(s: State, dt: number) {
       s.events.push('coin');
     }
   }
+  for (const c of s.comets) {
+    if (!c.taken && Math.hypot(c.x - s.bx, c.y - s.by) < TUNING.cometRadius) catchComet(s, c);
+  }
   for (const u of s.powerups) {
     if (u.taken || Math.hypot(u.x - s.bx, u.y - s.by) > TUNING.powerRadius) continue;
     u.taken = true;
@@ -418,6 +473,7 @@ export function step(s: State, realDt: number) {
     if (p.moveAmp) p.x = p.baseX + Math.sin(s.t * 1.3 + p.movePhase) * p.moveAmp;
     if (p.ring) p.gapAngle += p.gapSpin * dt;
   }
+  for (const c of s.comets) c.x += c.vx * dt;
   tickEffects(s, dt);
   if (s.dead) return;
 
