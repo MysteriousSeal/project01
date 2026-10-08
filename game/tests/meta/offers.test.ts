@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
-import { timeLeftToday } from '../../src/game/meta/calendar';
+import { countdownToTomorrow, dayKey } from '../../src/game/meta/calendar';
 import { CATALOG, COSMETIC_KINDS, THEMES } from '../../src/game/meta/cosmetics';
-import { BUNDLES, bundleOffer, buyBundle, buyDeal, dailyDeal, DEAL_DISCOUNT, MYSTERY_PRICE, mysteryPool, openMysteryBox } from '../../src/game/meta/offers';
+import { boxOpenedToday, BUNDLES, bundleOffer, buyBundle, buyDeal, dailyDeal, DEAL_DISCOUNT, MYSTERY_PRICE, mysteryPool, openMysteryBox } from '../../src/game/meta/offers';
 import { normalizeSave } from '../../src/game/meta/save';
 import { owns, priceOf } from '../../src/game/meta/shop';
 import { seededRng } from '../../src/game/sim/rng';
@@ -107,14 +107,14 @@ describe('mystery box', () => {
     const seen = new Set<string>();
     const total = mysteryPool(save).length;
     for (let i = 0; i < total; i++) {
-      const opened = openMysteryBox(save, rng)!;
+      const opened = openMysteryBox(save, rng, new Date(2026, 0, 1 + i))!;
       const key = `${opened.prize.kind}:${opened.prize.id}`;
       expect(seen.has(key)).toBe(false);
       seen.add(key);
       save = opened.save;
     }
     expect(mysteryPool(save)).toHaveLength(0);
-    expect(openMysteryBox(save, rng)).toBeNull();
+    expect(openMysteryBox(save, rng, new Date(2027, 0, 1))).toBeNull();
 
     let cheap = 0;
     for (let s = 0; s < 400; s++) {
@@ -124,6 +124,17 @@ describe('mystery box', () => {
     expect(cheap / 400).toBeGreaterThan(0.45);
   });
 
+  it('opens at most once per day', () => {
+    const today = day(MONDAY);
+    const first = openMysteryBox(saveWith({ wallet: MYSTERY_PRICE * 3 }), seededRng(1), today)!;
+    expect(boxOpenedToday(first.save, today)).toBe(true);
+    expect(first.save.boxDay).toBe(dayKey(today));
+    expect(openMysteryBox(first.save, seededRng(2), day(MONDAY, 23))).toBeNull();
+    expect(boxOpenedToday(first.save, day(MONDAY + 1))).toBe(false);
+    const tomorrow = openMysteryBox(first.save, seededRng(2), day(MONDAY + 1))!;
+    expect(tomorrow.save.wallet).toBe(MYSTERY_PRICE);
+  });
+
   it('refuses when the wallet is short', () => {
     expect(openMysteryBox(saveWith({ wallet: MYSTERY_PRICE - 1 }))).toBeNull();
   });
@@ -131,7 +142,8 @@ describe('mystery box', () => {
 
 describe('save data for the shop', () => {
   it('validates themes, boosts and the deal day', () => {
-    const s = normalizeSave({ themes: ['lava', 'nope'], theme: 'lava', boosts: { shield: 50, coins2x: -2, hack: 3 }, dealDay: 7 });
+    const s = normalizeSave({ themes: ['lava', 'nope'], theme: 'lava', boosts: { shield: 50, coins2x: -2, hack: 3 }, dealDay: 7, boxDay: '2026-6-8' });
+    expect(s.boxDay).toBe('2026-6-8');
     expect(s.themes).toEqual(['classic', 'lava']);
     expect(s.theme).toBe('lava');
     expect(s.boosts).toEqual({ shield: 9 });
@@ -139,8 +151,9 @@ describe('save data for the shop', () => {
     expect(normalizeSave({ theme: 'neon' }).theme).toBe('classic');
   });
 
-  it('formats the time left until midnight', () => {
-    expect(timeLeftToday(new Date(2026, 5, 8, 22, 15))).toBe('1h 45m');
-    expect(timeLeftToday(new Date(2026, 5, 8, 23, 50))).toBe('10m');
+  it('counts down to midnight as hh:mm:ss', () => {
+    expect(countdownToTomorrow(new Date(2026, 5, 8, 22, 15, 0))).toBe('01:45:00');
+    expect(countdownToTomorrow(new Date(2026, 5, 8, 23, 59, 58, 500))).toBe('00:00:02');
+    expect(countdownToTomorrow(new Date(2026, 5, 8, 0, 0, 0))).toBe('24:00:00');
   });
 });

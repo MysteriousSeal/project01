@@ -20,6 +20,7 @@ export type Save = {
   themes: string[];
   boosts: Record<string, number>;
   dealDay: string;
+  boxDay: string;
   upgrades: Record<string, number>;
   missions: Mission[];
   lastDaily: string;
@@ -47,6 +48,7 @@ export const defaultSave = (): Save => ({
   themes: [DEFAULT_COSMETIC],
   boosts: {},
   dealDay: '',
+  boxDay: '',
   upgrades: {},
   missions: [],
   lastDaily: '',
@@ -139,6 +141,7 @@ export function normalizeSave(input: unknown): Save {
     ...cosmetics,
     boosts,
     dealDay: text(r.dealDay),
+    boxDay: text(r.boxDay),
     upgrades,
     missions: missions.slice(0, MISSION_SLOTS),
     lastDaily: text(r.lastDaily),

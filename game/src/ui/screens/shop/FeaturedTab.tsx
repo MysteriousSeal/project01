@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { timeLeftToday } from '../../../game/meta/calendar';
+import { countdownToTomorrow } from '../../../game/meta/calendar';
 import { CATALOG, cosmeticById, skinById } from '../../../game/meta/cosmetics';
-import { BUNDLES, bundleOffer, dailyDeal, DEAL_DISCOUNT, MYSTERY_PRICE, mysteryPool } from '../../../game/meta/offers';
+import { boxOpenedToday, BUNDLES, bundleOffer, dailyDeal, DEAL_DISCOUNT, MYSTERY_PRICE, mysteryPool } from '../../../game/meta/offers';
 import { Save } from '../../../game/meta/save';
 import { OfferItem, owns } from '../../../game/meta/shop';
 import { Button } from '../../components/Button';
 import { CosmeticPreview } from '../../components/CosmeticPreview';
 import { Coin, Icon } from '../../components/Icon';
 import { SectionLabel } from '../../components/Page';
+import { useNow } from '../../hooks';
 import { alpha, C, CARD, F, fmt, GAP, GUTTER, RADIUS } from '../../theme';
 
 type Props = {
@@ -26,10 +27,14 @@ export function FeaturedTab({ save, onBuyDeal, onBuyBundle, onOpenBox, onEquip }
   const deal = dailyDeal(save);
   const trailColor = skinById(save.skin).trail;
   const poolLeft = mysteryPool(save).length;
+  const now = useNow();
+  const countdown = countdownToTomorrow(now);
+  const opened = boxOpenedToday(save, now);
+  const boxNote = !poolLeft ? 'You own everything. Collection complete!' : opened ? 'Opened today. A new box unlocks at midnight.' : `${poolLeft} items left to discover. Rare looks are rarer.`;
 
   return (
     <ScrollView contentContainerStyle={styles.list}>
-      <SectionLabel>DAILY DEAL · {Math.round(DEAL_DISCOUNT * 100)}% OFF · ENDS IN {timeLeftToday(new Date()).toUpperCase()}</SectionLabel>
+      <SectionLabel>DAILY DEAL · {Math.round(DEAL_DISCOUNT * 100)}% OFF · ENDS IN <Text style={styles.timer}>{countdown}</Text></SectionLabel>
       {deal ? (
         <View style={[styles.card, styles.deal]}>
           <View style={styles.preview}>
@@ -51,16 +56,22 @@ export function FeaturedTab({ save, onBuyDeal, onBuyBundle, onOpenBox, onEquip }
         </View>
       )}
 
-      <SectionLabel>MYSTERY BOX · A RANDOM ITEM YOU DON&apos;T OWN</SectionLabel>
+      <SectionLabel>MYSTERY BOX · ONE PER DAY · A RANDOM ITEM YOU DON&apos;T OWN</SectionLabel>
       <View style={[styles.card, styles.box]}>
         <View style={styles.boxIcon}>
           <Icon name="gift" size={26} color={C.pink} />
         </View>
         <View style={styles.body}>
           <Text style={styles.name}>Mystery Box</Text>
-          <Text style={styles.desc}>{poolLeft ? `${poolLeft} items left to discover. Rare looks are rarer.` : 'You own everything. Collection complete!'}</Text>
+          <Text style={styles.desc}>{boxNote}</Text>
         </View>
-        {poolLeft > 0 && (
+        {poolLeft > 0 && opened && (
+          <View style={styles.countdown} accessible accessibilityLabel={`Next box in ${countdown}`}>
+            <Text style={styles.countdownLbl}>NEXT BOX</Text>
+            <Text style={styles.countdownTxt}>{countdown}</Text>
+          </View>
+        )}
+        {poolLeft > 0 && !opened && (
           <Button label="Open" price={MYSTERY_PRICE} variant={save.wallet >= MYSTERY_PRICE ? 'gold' : 'muted'} onPress={() => setPrize(onOpenBox())} style={styles.btn} />
         )}
       </View>
@@ -137,6 +148,10 @@ const styles = StyleSheet.create({
   was: { color: C.dim, fontFamily: F.mono, fontSize: 12, marginTop: 2 },
   strike: { textDecorationLine: 'line-through' },
   btn: { minWidth: 88, paddingVertical: 10 },
+  timer: { color: C.gold, fontFamily: F.mono },
+  countdown: { minWidth: 88, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 8, borderRadius: RADIUS.md, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line },
+  countdownLbl: { color: C.dim, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  countdownTxt: { color: C.text, fontFamily: F.mono, fontSize: 15, fontWeight: '800' },
   bundleHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   save: { color: C.space, backgroundColor: C.pink, fontWeight: '900', fontSize: 13, paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.sm, overflow: 'hidden' },
   items: { flexDirection: 'row', gap: 6 },

@@ -58,9 +58,11 @@ export function buyBundle(save: Save, id: string): ShopResult {
 
 export const mysteryPool = (save: Save) => unowned(save);
 
-export function openMysteryBox(save: Save, rng: Rng = Math.random): { save: Save; prize: OfferItem } | null {
+export const boxOpenedToday = (save: Save, now: Date = new Date()) => save.boxDay === dayKey(now);
+
+export function openMysteryBox(save: Save, rng: Rng = Math.random, now: Date = new Date()): { save: Save; prize: OfferItem } | null {
   const pool = mysteryPool(save);
-  if (!pool.length || save.wallet < MYSTERY_PRICE) return null;
+  if (!pool.length || save.wallet < MYSTERY_PRICE || boxOpenedToday(save, now)) return null;
   const weights = pool.map((it) => 1 / Math.sqrt(priceOf(it.kind, it.id)!));
   let roll = rng() * weights.reduce((a, w) => a + w, 0);
   let prize = pool[pool.length - 1];
@@ -72,5 +74,5 @@ export function openMysteryBox(save: Save, rng: Rng = Math.random): { save: Save
     }
   }
   const next = grant(save, [prize], MYSTERY_PRICE, false);
-  return next ? { save: next, prize } : null;
+  return next ? { save: { ...next, boxDay: dayKey(now) }, prize } : null;
 }
