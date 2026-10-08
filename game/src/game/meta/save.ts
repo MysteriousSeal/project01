@@ -1,7 +1,7 @@
 import { CHALLENGE_ATTEMPTS, ChallengeSlot, DailyChallenges, emptyChallenges, MEDAL_TIERS } from './challenge';
 import { CHALLENGE_TYPES, CHALLENGES_PER_DAY } from './challengeTypes';
 import { CATALOG, DEFAULT_COSMETIC } from './cosmetics';
-import { parseTrack, Track } from './ghost';
+import { parseTrack, Track } from '../sim/ghost';
 import { Mission, MISSION_KINDS, MISSION_SLOTS } from './missions';
 import { maxLevel, UPGRADES } from './upgrades';
 
@@ -26,7 +26,7 @@ export type Save = {
 
 export type Settings = { ghost: boolean };
 
-export const defaultSettings = (): Settings => ({ ghost: false });
+const defaultSettings = (): Settings => ({ ghost: false });
 
 export const defaultSave = (): Save => ({
   best: 0,
@@ -86,6 +86,11 @@ function challenges(raw: unknown, legacy: unknown): DailyChallenges {
   return { day: unique.length ? text(src.day) : '', slots: unique, streak: count(src.streak), lastMedalDay: text(src.lastMedalDay) };
 }
 
+function settings(raw: unknown): Settings {
+  const s = raw && typeof raw === 'object' ? (raw as Raw) : {};
+  return { ghost: s.ghost === true };
+}
+
 export function normalizeSave(input: unknown): Save {
   const base = defaultSave();
   if (!input || typeof input !== 'object') return base;
@@ -121,6 +126,6 @@ export function normalizeSave(input: unknown): Save {
     streak: count(r.streak),
     ghost: parseTrack(r.ghost),
     challenges: challenges(r.challenges, r.challenge),
-    settings: { ghost: r.settings && typeof r.settings === 'object' ? (r.settings as Raw).ghost === true : false },
+    settings: settings(r.settings),
   };
 }

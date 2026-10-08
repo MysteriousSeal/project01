@@ -1,4 +1,4 @@
-import { DEFAULT_RULES, Rules } from './world';
+import { DEFAULT_RULES, Rules } from '../sim/world';
 
 export type ChallengeStat = 'score' | 'coins';
 export type ChallengeIcon = 'fire' | 'bullseye' | 'skull' | 'gem' | 'bolt' | 'coins' | 'heart-crack';

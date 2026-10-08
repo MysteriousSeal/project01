@@ -1,9 +1,10 @@
 import { ChallengeOutcome, recordChallenge } from './challenge';
-import type { RunResult } from './engine';
+import type { RunResult } from '../sim/engine';
 import { advanceMission, fillMissions, isDone, Mission } from './missions';
-import type { Rng } from './rng';
-import { trackBest } from './ghost';
+import type { Rng } from '../sim/rng';
+import { trackBest } from '../sim/ghost';
 import type { Save } from './save';
+import type { RunMode } from './session';
 
 export const xpForLevel = (lvl: number) => 80 + lvl * 40;
 
@@ -40,7 +41,6 @@ export type RunReport = {
   challenge?: ChallengeOutcome;
 };
 
-export type RunMode = 'normal' | 'daily';
 export type ApplyOptions = { mode?: RunMode; challenge?: string; rng?: Rng; now?: Date };
 
 export function applyRun(save: Save, r: RunResult, { mode = 'normal', challenge: type = '', rng, now }: ApplyOptions = {}): RunReport {

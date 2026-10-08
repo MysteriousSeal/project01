@@ -1,10 +1,5 @@
+import { dayKey, yesterdayKey } from './calendar';
 import type { Save } from './save';
-
-export const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-
-const yesterdayOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
-
-export const yesterdayKey = (d: Date) => dayKey(yesterdayOf(d));
 
 export const dailyReward = (streak: number) => 15 + Math.min(streak, 7) * 10;
 

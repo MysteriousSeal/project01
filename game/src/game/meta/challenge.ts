@@ -1,8 +1,8 @@
 import { ChallengeType, challengeTypeById, challengeTypesFor } from './challengeTypes';
-import { dayKey, yesterdayKey } from './daily';
-import type { RunResult } from './engine';
-import { Track, trackBest } from './ghost';
-import { C } from './palette';
+import { dayKey, yesterdayKey } from './calendar';
+import type { RunResult } from '../sim/engine';
+import { Track, trackBest } from '../sim/ghost';
+import { C } from '../palette';
 
 export const CHALLENGE_ATTEMPTS = 3;
 
@@ -18,7 +18,7 @@ export type ChallengeSlot = { type: string; attempts: number; best: number; meda
 
 export type DailyChallenges = { day: string; slots: ChallengeSlot[]; streak: number; lastMedalDay: string };
 
-export const emptySlot = (type: string): ChallengeSlot => ({ type, attempts: 0, best: 0, medal: 0, ghost: [] });
+const emptySlot = (type: string): ChallengeSlot => ({ type, attempts: 0, best: 0, medal: 0, ghost: [] });
 export const emptyChallenges = (): DailyChallenges => ({ day: '', slots: [], streak: 0, lastMedalDay: '' });
 
 export const medalsOf = (t: ChallengeType): Medal[] => MEDAL_TIERS.map((tier, i) => ({ ...tier, score: t.targets[i] }));

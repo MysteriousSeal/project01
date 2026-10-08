@@ -1,6 +1,6 @@
-import { createState, CreateOptions, planetOf, State, step, TUNING } from '../src/game/engine';
-import { seededRng } from '../src/game/rng';
-import { defaultSave, Save } from '../src/game/save';
+import { createState, CreateOptions, planetOf, RunResult, State, step, TUNING } from '../src/game/sim/engine';
+import { seededRng } from '../src/game/sim/rng';
+import { defaultSave, Save } from '../src/game/meta/save';
 
 export const W = 390;
 export const H = 844;
@@ -37,3 +37,18 @@ export const runFor = (s: State, seconds: number) => {
 };
 
 export const saveWith = (patch: Partial<Save> = {}): Save => ({ ...defaultSave(), ...patch });
+
+export const drain = (s: State) => {
+  const out = [...s.events];
+  s.events.length = 0;
+  return out;
+};
+
+export const hopTo = (s: State, idx: number) => {
+  while (s.cur < idx - 1) hop(s);
+};
+
+export const result = (patch: Partial<RunResult> = {}): RunResult => ({ score: 0, coins: 0, perfects: 0, bestCombo: 0, planets: 0, landings: [], ...patch });
+
+export const MONDAY = 8;
+export const day = (d: number, h = 12) => new Date(2026, 5, d, h);

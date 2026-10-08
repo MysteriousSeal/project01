@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { nextSkin } from '../../game/cosmetics';
-import { Save } from '../../game/save';
+import { nextSkin } from '../../game/meta/cosmetics';
+import { Save } from '../../game/meta/save';
 import { C, fmt, RADIUS } from '../theme';
 import { Ball } from './Ball';
 import { Coin, Icon } from './Icon';
@@ -24,8 +24,8 @@ export function NextUnlock({ save, onPress }: { save: Save; onPress: () => void 
 
 const styles = StyleSheet.create({
   row: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, borderWidth: 1, borderColor: C.line },
-  ready: { borderColor: C.gold, backgroundColor: '#ffd34d14' },
+  ready: { borderColor: C.gold, backgroundColor: C.goldWash },
   body: { flex: 1, gap: 6 },
-  txt: { color: '#ffffffcc', fontSize: 13, fontWeight: '600' },
+  txt: { color: C.soft, fontSize: 13, fontWeight: '600' },
   go: { color: C.sky, fontSize: 13, fontWeight: '800' },
 });

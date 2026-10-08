@@ -1,11 +1,10 @@
 import { MAX_TRACK, Track, TRACK_END } from './ghost';
-import { C, hsl } from './palette';
+import { C, hsl } from '../palette';
 import { between, type Rng } from './rng';
-import { DEFAULT_MODS, type Mods } from './upgrades';
-import { Coin, DEFAULT_RULES, inGap, makePlanet, pickupFor, Planet, PowerKind, PowerUp, Rules, WORLD, zoneIndex, ZONES } from './world';
+import { Coin, DEFAULT_MODS, DEFAULT_RULES, inGap, makePlanet, Mods, pickupFor, Planet, PowerKind, PowerUp, Rules, zoneIndex, ZONES } from './world';
 
-export { DEFAULT_RULES, isBossIndex, WORLD, zoneIndex, zoneOf, ZONES } from './world';
-export type { Coin, Planet, PowerKind, PowerUp, Rules } from './world';
+export { DEFAULT_MODS, DEFAULT_RULES, inGap, isBossIndex, WORLD, zoneIndex, zoneOf, ZONES } from './world';
+export type { Coin, Mods, Planet, PowerKind, PowerUp, Rules } from './world';
 
 export const TUNING = {
   launchSpeed: 780,
@@ -25,7 +24,6 @@ export const TUNING = {
   magnetPull: 650,
   goldCoins: 5,
   milestoneEvery: 25,
-  planetsPerZone: WORLD.planetsPerZone,
   maxParticles: 240,
   bossBonus: 10,
   bossCoins: 15,
@@ -122,6 +120,12 @@ export const runResult = (s: State): RunResult => ({ score: s.score, coins: s.co
 export const isSettled = (s: State) => s.dead && s.particles.length === 0 && s.popups.length === 0;
 export const ghostActive = (s: State) => !s.ghostDone;
 
+export function retain<T>(arr: T[], keep: (x: T) => boolean) {
+  let n = 0;
+  for (let i = 0; i < arr.length; i++) if (keep(arr[i])) arr[n++] = arr[i];
+  arr.length = n;
+}
+
 function ensurePlanets(s: State) {
   let last = s.planets[s.planets.length - 1];
   while (last.y > s.camY - s.H * 0.6 || last.idx < s.cur + TUNING.planetsAhead) {
@@ -133,9 +137,9 @@ function ensurePlanets(s: State) {
     last = p;
   }
   const cutoff = s.camY + s.H + 200;
-  s.planets = s.planets.filter((p) => p.y < cutoff || p.idx === s.cur);
-  s.coins = s.coins.filter((c) => c.y < cutoff && !c.taken);
-  s.powerups = s.powerups.filter((u) => u.y < cutoff && !u.taken);
+  retain(s.planets, (p) => p.y < cutoff || p.idx === s.cur);
+  retain(s.coins, (c) => c.y < cutoff && !c.taken);
+  retain(s.powerups, (u) => u.y < cutoff && !u.taken);
 }
 
 function burst(s: State, x: number, y: number, color: string, n: number, speed = 220) {
@@ -381,12 +385,12 @@ function tickEffects(s: State, dt: number) {
     q.vy *= 0.94;
     q.life -= dt;
   }
-  s.particles = s.particles.filter((q) => q.life > 0);
+  retain(s.particles, (q) => q.life > 0);
   for (const u of s.popups) {
     u.y -= 50 * dt;
     u.life -= dt;
   }
-  s.popups = s.popups.filter((u) => u.life > 0);
+  retain(s.popups, (u) => u.life > 0);
 }
 
 export function step(s: State, realDt: number) {

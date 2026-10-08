@@ -1,5 +1,5 @@
 import { Animated, StyleSheet, View } from 'react-native';
-import { Skin, TrailStyle } from '../../game/cosmetics';
+import { Skin, TrailStyle } from '../../game/meta/cosmetics';
 import { useLoop } from '../hooks';
 import { C } from '../theme';
 import { Ball } from './Ball';

@@ -1,6 +1,7 @@
 import { View, ViewStyle } from 'react-native';
-import { TrailStyle } from '../../game/cosmetics';
-import { TUNING } from '../../game/engine';
+import { TrailStyle } from '../../game/meta/cosmetics';
+import { TUNING } from '../../game/sim/engine';
+import { alpha } from '../theme';
 
 export const trailLength = (style: TrailStyle) => (style === 'comet' ? TUNING.trailLength : 12);
 
@@ -21,7 +22,7 @@ export function TrailDot({ style, k, i, x, y, color, t, scale = 1 }: Props) {
     }
     case 'pixel': {
       const s = Math.round((4 + k * 10) * scale);
-      return box(s, { backgroundColor: color, opacity: 0.25 + k * 0.6, borderWidth: 1, borderColor: '#ffffff40' });
+      return box(s, { backgroundColor: color, opacity: 0.25 + k * 0.6, borderWidth: 1, borderColor: alpha('#ffffff', 0.25) });
     }
     case 'ghost': {
       const s = (6 + k * 16) * scale;

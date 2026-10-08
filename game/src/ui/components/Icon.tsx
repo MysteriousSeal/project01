@@ -4,7 +4,6 @@ import { C } from '../theme';
 
 export type IconName =
   | 'house'
-  | 'star'
   | 'cart-shopping'
   | 'gear'
   | 'coins'

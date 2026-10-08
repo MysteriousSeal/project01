@@ -1,9 +1,10 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Save } from '../../../game/save';
-import { upgradeCost, upgradeLevel } from '../../../game/shop';
-import { UPGRADES } from '../../../game/upgrades';
+import { Save } from '../../../game/meta/save';
+import { upgradeCost, upgradeLevel } from '../../../game/meta/shop';
+import { UPGRADES } from '../../../game/meta/upgrades';
 import { Button } from '../../components/Button';
-import { C, F, GAP, GUTTER, RADIUS } from '../../theme';
+import { Pips } from '../../components/Pips';
+import { C, CARD, F, GAP, GUTTER } from '../../theme';
 
 export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string) => void }) {
   return (
@@ -16,9 +17,7 @@ export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string) =
           <View key={u.id} style={styles.row}>
             <View style={styles.info}>
               <Text style={styles.name}>{u.name}</Text>
-              <View style={styles.pips} accessible accessibilityLabel={`Level ${lvl} of ${u.costs.length}`}>
-                {u.costs.map((_, i) => <View key={i} style={[styles.pip, i < lvl && styles.pipOn]} />)}
-              </View>
+              <Pips total={u.costs.length} filled={lvl} color={C.sky} width={22} height={6} gap={5} label={`Level ${lvl} of ${u.costs.length}`} />
               <Text style={styles.effect}>{u.effect(lvl)}</Text>
               {cost !== null && <Text style={styles.next}>Next: {u.effect(lvl + 1)}</Text>}
             </View>
@@ -45,13 +44,10 @@ export function UpgradesTab({ save, onBuy }: { save: Save; onBuy: (id: string) =
 const styles = StyleSheet.create({
   list: { paddingHorizontal: GUTTER, paddingBottom: 40, gap: GAP },
   intro: { color: C.dim, fontSize: 13, textAlign: 'center', marginBottom: 2 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: RADIUS.lg, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
+  row: { ...CARD, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   info: { flex: 1, gap: 6 },
   name: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 17 },
-  pips: { flexDirection: 'row', gap: 5 },
-  pip: { width: 22, height: 6, borderRadius: 3, backgroundColor: '#ffffff1f' },
-  pipOn: { backgroundColor: C.sky },
-  effect: { color: '#ffffffdd', fontSize: 13, fontWeight: '600' },
+  effect: { color: C.soft, fontSize: 13, fontWeight: '600' },
   next: { color: C.sky, fontSize: 12, fontWeight: '700' },
   btn: { minWidth: 92, paddingVertical: 10 },
 });

@@ -1,5 +1,5 @@
-import type { RunResult } from './engine';
-import type { Rng } from './rng';
+import type { RunResult } from '../sim/engine';
+import type { Rng } from '../sim/rng';
 
 export type MissionKind = 'score' | 'coins' | 'perfects' | 'combo' | 'games' | 'totalScore';
 export type Mission = { id: string; kind: MissionKind; target: number; progress: number; reward: number };

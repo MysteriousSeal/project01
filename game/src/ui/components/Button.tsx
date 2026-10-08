@@ -21,7 +21,7 @@ const FILL: Record<ButtonVariant, ViewStyle> = {
   secondary: { backgroundColor: C.panel, borderWidth: 2, borderColor: C.sky },
   gold: { backgroundColor: C.gold },
   sky: { backgroundColor: C.sky },
-  muted: { backgroundColor: '#ffffff10', borderWidth: 1, borderColor: C.line },
+  muted: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.line },
 };
 
 const INK: Record<ButtonVariant, string> = { primary: C.space, secondary: C.sky, gold: C.space, sky: C.space, muted: C.dim };

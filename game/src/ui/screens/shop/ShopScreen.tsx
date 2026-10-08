@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CATALOG, CosmeticKind, skinById, trailById } from '../../../game/cosmetics';
-import { Save } from '../../../game/save';
-import { buyCosmetic, buyUpgrade, equipCosmetic, ShopResult } from '../../../game/shop';
+import { CATALOG, CosmeticKind, skinById, trailById } from '../../../game/meta/cosmetics';
+import { Save } from '../../../game/meta/save';
+import { buyCosmetic, buyUpgrade, equipCosmetic, ShopResult } from '../../../game/meta/shop';
 import { haptic } from '../../../services/haptics';
 import { Ball } from '../../components/Ball';
 import { OrbitHero } from '../../components/OrbitHero';
-import { TopBar } from '../../components/TopBar';
+import { Page } from '../../components/Page';
 import { TrailDot } from '../../components/TrailDot';
 import { useReducedMotion } from '../../hooks';
-import { C, F, GUTTER, RADIUS } from '../../theme';
+import { C, GUTTER, RADIUS } from '../../theme';
 import { CosmeticTab } from './CosmeticTab';
 import { UpgradesTab } from './UpgradesTab';
 
@@ -43,12 +43,7 @@ export function ShopScreen({ save, onChange }: { save: Save; onChange: (s: Save)
   });
 
   return (
-    <View style={styles.root}>
-      <TopBar save={save} />
-      <View style={styles.head}>
-        <Text style={styles.title} accessibilityRole="header">Shop</Text>
-        {tab !== 'upgrades' && <Text style={styles.count}>{save[CATALOG[tab].owned].length}/{CATALOG[tab].items.length} owned</Text>}
-      </View>
+    <Page save={save} title="Shop" scroll={false} right={tab !== 'upgrades' ? `${save[CATALOG[tab].owned].length}/${CATALOG[tab].items.length} owned` : undefined}>
 
       <View style={styles.tabs} accessibilityRole="tablist">
         {TABS.map((t) => (
@@ -90,15 +85,11 @@ export function ShopScreen({ save, onChange }: { save: Save; onChange: (s: Save)
       )}
 
       {tab === 'upgrades' && <UpgradesTab save={save} onBuy={(id) => apply(buyUpgrade(save, id), 'success')} />}
-    </View>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.space },
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: GUTTER, paddingTop: 4, paddingBottom: 16 },
-  title: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 30, letterSpacing: 2 },
-  count: { color: C.dim, fontFamily: F.mono, fontSize: 12, textAlign: 'right' },
   tabs: { flexDirection: 'row', marginHorizontal: GUTTER, marginBottom: 12, padding: 4, borderRadius: RADIUS.lg, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: RADIUS.sm + 2 },
   tabOn: { backgroundColor: C.sky },

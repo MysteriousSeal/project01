@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
-import { SKINS, TRAILS } from '../src/game/cosmetics';
-import { buyCosmetic, buyUpgrade, equipCosmetic, upgradeCost, upgradeLevel } from '../src/game/shop';
-import { modsFrom, UPGRADES } from '../src/game/upgrades';
-import { saveWith } from './helpers';
+import { SKINS, TRAILS } from '../../src/game/meta/cosmetics';
+import { buyCosmetic, buyUpgrade, equipCosmetic, upgradeCost, upgradeLevel } from '../../src/game/meta/shop';
+import { modsFrom, UPGRADES } from '../../src/game/meta/upgrades';
+import { saveWith } from '../helpers';
 
 const ember = SKINS.find((s) => s.id === 'ember')!;
 const comet = TRAILS.find((t) => t.id === 'comet')!;

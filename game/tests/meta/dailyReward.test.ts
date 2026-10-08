@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
-import { claimDaily, dailyReward, dailyStatus, dayKey } from '../src/game/daily';
-import { saveWith } from './helpers';
+import { dayKey } from '../../src/game/meta/calendar';
+import { claimDaily, dailyReward, dailyStatus } from '../../src/game/meta/dailyReward';
+import { saveWith } from '../helpers';
 
 const at = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h);
 

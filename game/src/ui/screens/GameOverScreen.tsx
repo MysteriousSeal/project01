@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
-import type { RunResult } from '../../game/engine';
-import type { RunReport } from '../../game/progress';
+import type { RunResult } from '../../game/sim/engine';
+import type { RunReport } from '../../game/meta/progress';
 import { Button } from '../components/Button';
-import { slotOf } from '../../game/challenge';
+import { slotOf } from '../../game/meta/challenge';
 import { ChallengeRow } from '../components/ChallengeRow';
 import { Coin } from '../components/Icon';
 import { MissionsCard } from '../components/MissionsCard';
@@ -65,7 +65,7 @@ function Stat({ label, value, color, compact }: { label: string; value: string; 
 }
 
 const styles = StyleSheet.create({
-  root: { ...FILL, backgroundColor: '#0b1026ee', alignItems: 'center' },
+  root: { ...FILL, backgroundColor: C.overlay, alignItems: 'center' },
   mid: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: GUTTER },
   badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, minHeight: 28, alignItems: 'center' },
   badge: { color: C.space, fontWeight: '900', fontSize: 14, letterSpacing: 1, paddingHorizontal: 12, paddingVertical: 5, borderRadius: RADIUS.md, overflow: 'hidden' },
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   bigCompact: { fontSize: 56, lineHeight: 62 },
   sub: { color: C.sky, fontSize: 18, fontWeight: '800', letterSpacing: 2, marginTop: 8 },
   row: { flexDirection: 'row', alignSelf: 'stretch', justifyContent: 'center', gap: GAP },
-  stat: { flex: 1, maxWidth: 104, alignItems: 'center', backgroundColor: '#ffffff12', borderRadius: RADIUS.md, paddingVertical: 10 },
+  stat: { flex: 1, maxWidth: 104, alignItems: 'center', backgroundColor: C.surface, borderRadius: RADIUS.md, paddingVertical: 10 },
   statVal: { fontFamily: F.mono, fontSize: 24, fontWeight: '900' },
   statLbl: { color: C.dim, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
   bottom: { alignItems: 'center', gap: 12, paddingTop: 6, paddingBottom: BOTTOM_INSET },

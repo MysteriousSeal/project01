@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { levelInfo } from '../../game/progress';
-import { Save } from '../../game/save';
+import { levelInfo } from '../../game/meta/progress';
+import { Save } from '../../game/meta/save';
 import { C, F, fmt, GUTTER, RADIUS, TOP_INSET } from '../theme';
 import { ProgressBar } from './ProgressBar';
 import { Coin } from './Icon';

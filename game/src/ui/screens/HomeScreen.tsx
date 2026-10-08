@@ -1,8 +1,8 @@
 import { Animated, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { skinById, trailById } from '../../game/cosmetics';
+import { skinById, trailById } from '../../game/meta/cosmetics';
 import { hsl, planetHue } from '../../game/palette';
-import { levelOf } from '../../game/progress';
-import { Save } from '../../game/save';
+import { levelOf } from '../../game/meta/progress';
+import { Save } from '../../game/meta/save';
 import { Button } from '../components/Button';
 import { MissionsCard } from '../components/MissionsCard';
 import { NextUnlock } from '../components/NextUnlock';

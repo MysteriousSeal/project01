@@ -1,20 +1,20 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { attemptsLeft, challengeSeed, currentChallenges, isOpen, slotOf, startChallenge, typeOf } from './src/game/challenge';
-import { skinById, trailById } from './src/game/cosmetics';
-import { claimDaily, dailyStatus, dayKey } from './src/game/daily';
-import type { RunResult } from './src/game/engine';
-import { applyRun, ensureMissions, RunMode, RunReport } from './src/game/progress';
-import { Save } from './src/game/save';
-import { DEFAULT_MODS, modsFrom } from './src/game/upgrades';
+import { currentChallenges, isOpen } from './src/game/meta/challenge';
+import { skinById, trailById } from './src/game/meta/cosmetics';
+import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
+import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
+import { Save } from './src/game/meta/save';
+import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
+import type { RunResult } from './src/game/sim/engine';
 import { haptic, hapticForEvent } from './src/services/haptics';
 import { loadSave, writeSave } from './src/services/storage';
 import { TabBar, TabId } from './src/ui/components/TabBar';
 import { DailyScreen } from './src/ui/screens/DailyScreen';
 import { GameOverScreen } from './src/ui/screens/GameOverScreen';
-import { GameScreen } from './src/ui/screens/GameScreen';
+import { GameScreen } from './src/ui/screens/game/GameScreen';
 import { HomeScreen } from './src/ui/screens/HomeScreen';
 import { SettingsScreen } from './src/ui/screens/SettingsScreen';
 import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
@@ -22,19 +22,14 @@ import { C } from './src/ui/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-type Screen = 'menu' | 'play' | 'over';
+type Run = { id: number; config: RunConfig };
 type Outcome = { result: RunResult; report: RunReport };
-
-const TUTORIAL_GAMES = 3;
 
 export default function App() {
   const { width, height } = useWindowDimensions();
   const [save, setSave] = useState<Save | null>(null);
-  const [screen, setScreen] = useState<Screen>('menu');
   const [tab, setTab] = useState<TabId>('home');
-  const [run, setRun] = useState(0);
-  const [mode, setMode] = useState<RunMode>('normal');
-  const [active, setActive] = useState('');
+  const [run, setRun] = useState<Run | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   useEffect(() => {
@@ -54,45 +49,44 @@ export default function App() {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
   }, [loaded]);
 
+  const inMenu = run === null;
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (screen !== 'menu') setScreen('menu');
+      if (!inMenu) setRun(null);
       else if (tab !== 'home') setTab('home');
       else return false;
       return true;
     });
     return () => sub.remove();
-  }, [screen, tab]);
-
-  const mods = useMemo(() => modsFrom(save?.upgrades ?? {}), [save?.upgrades]);
+  }, [inMenu, tab]);
 
   if (!save) return <View style={styles.root} />;
 
   const goTab = (t: TabId) => {
     setTab(t);
-    setScreen('menu');
+    setRun(null);
+    setOutcome(null);
   };
 
-  const play = (next: RunMode, type = '') => {
-    if (next === 'daily') {
-      const challenges = startChallenge(save.challenges, type);
-      if (!challenges) return;
-      setSave({ ...save, challenges });
-      setActive(type);
-    }
-    setMode(next);
-    setRun((r) => r + 1);
-    setScreen('play');
+  const play = (mode: RunMode, type?: string) => {
+    const started = startRun(save, mode, type);
+    if (!started) return;
+    setSave(started.save);
+    setOutcome(null);
+    setRun((r) => ({ id: (r?.id ?? 0) + 1, config: started.config }));
   };
 
-  const activeSlot = slotOf(currentChallenges(save.challenges), active);
-  const retry = () => (mode === 'daily' && activeSlot && attemptsLeft(activeSlot) > 0 ? play('daily', active) : play('normal'));
+  const retry = () => {
+    if (!run) return;
+    const next = retryMode(save, run.config);
+    play(next.mode, next.type);
+  };
 
   const finishRun = (result: RunResult) => {
-    const report = applyRun(save, result, { mode, challenge: active });
+    if (!run) return;
+    const report = applyRun(save, result, { mode: run.config.mode, challenge: run.config.challenge?.id });
     setSave(report.save);
     setOutcome({ result, report });
-    setScreen('over');
     if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
   };
 
@@ -103,13 +97,14 @@ export default function App() {
     haptic('success');
   };
 
-  const daily = mode === 'daily';
   const dailyBadge = dailyStatus(save).available || currentChallenges(save.challenges).slots.some(isOpen);
 
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      {screen === 'menu' ? (
+      {run ? (
+        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} config={run.config} onEvent={hapticForEvent} onEnd={finishRun} />
+      ) : (
         <>
           <View style={styles.page}>
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
@@ -119,25 +114,15 @@ export default function App() {
           </View>
           <TabBar tab={tab} onChange={setTab} badges={{ daily: dailyBadge }} />
         </>
-      ) : (
-        <GameScreen
-          key={run}
-          W={width}
-          H={height}
-          skin={skinById(save.skin)}
-          trailStyle={trailById(save.trail).id}
-          mods={daily ? DEFAULT_MODS : mods}
-          showHint={save.games < TUTORIAL_GAMES}
-          bestIdx={daily ? 0 : save.bestPlanet}
-          ghost={!save.settings.ghost ? [] : daily && activeSlot ? activeSlot.ghost : save.ghost}
-          seed={daily ? challengeSeed(save.challenges.day || dayKey(new Date()), active) : undefined}
-          challenge={daily && activeSlot ? typeOf(activeSlot) : undefined}
-          onEvent={hapticForEvent}
-          onEnd={finishRun}
-        />
       )}
-      {screen === 'over' && outcome && (
-        <GameOverScreen result={outcome.result} report={outcome.report} onRetry={retry} onHome={() => goTab(daily ? 'daily' : 'home')} onShop={() => goTab('shop')} />
+      {run && outcome && (
+        <GameOverScreen
+          result={outcome.result}
+          report={outcome.report}
+          onRetry={retry}
+          onHome={() => goTab(run.config.mode === 'daily' ? 'daily' : 'home')}
+          onShop={() => goTab('shop')}
+        />
       )}
     </View>
   );

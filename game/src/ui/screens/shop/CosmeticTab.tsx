@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { Cosmetic } from '../../../game/cosmetics';
+import { Cosmetic } from '../../../game/meta/cosmetics';
 import { Button } from '../../components/Button';
 import { Coin } from '../../components/Icon';
 import { C, F, fmt, GAP, GUTTER, RADIUS } from '../../theme';

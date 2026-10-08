@@ -1,14 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
-import { currentPlanet, isSettled, launchDir, planetOf, runResult, State, step, tap, TUNING, zoneIndex } from '../src/game/engine';
-import { seededRng } from '../src/game/rng';
-import { modsFrom } from '../src/game/upgrades';
-import { aimAt, DT, flyUntilSettled, hop, newGame, runFor } from './helpers';
-
-const eventsOf = (s: State) => {
-  const out = [...s.events];
-  s.events.length = 0;
-  return out;
-};
+import { currentPlanet, isSettled, launchDir, planetOf, retain, runResult, State, step, tap, TUNING, WORLD, zoneIndex } from '../../src/game/sim/engine';
+import { seededRng } from '../../src/game/sim/rng';
+import { modsFrom } from '../../src/game/meta/upgrades';
+import { aimAt, drain, DT, flyUntilSettled, hop, newGame, runFor } from '../helpers';
 
 describe('createState', () => {
   it('starts orbiting a centered first planet with planets generated ahead', () => {
@@ -46,11 +40,11 @@ describe('tap', () => {
     expect(s.flying).toBe(true);
     expect(Math.hypot(s.vx, s.vy)).toBeCloseTo(TUNING.launchSpeed);
     expect(s.vx / TUNING.launchSpeed).toBeCloseTo(d.x);
-    expect(eventsOf(s)).toEqual(['launch']);
+    expect(drain(s)).toEqual(['launch']);
     const before = { vx: s.vx, vy: s.vy };
     tap(s);
     expect({ vx: s.vx, vy: s.vy }).toEqual(before);
-    expect(eventsOf(s)).toEqual([]);
+    expect(drain(s)).toEqual([]);
   });
 });
 
@@ -63,7 +57,7 @@ describe('landing', () => {
     expect(s.perfects).toBe(1);
     expect(s.combo).toBe(1);
     expect(s.score).toBe(2);
-    expect(eventsOf(s)).toContain('perfect');
+    expect(drain(s)).toContain('perfect');
     expect(currentPlanet(s).fuse).toBe(currentPlanet(s).fuseMax);
   });
 
@@ -81,9 +75,9 @@ describe('landing', () => {
     const s = newGame(3);
     for (let i = 0; i < s.rules.feverEvery - 1; i++) hop(s);
     expect(s.fever).toBe(0);
-    eventsOf(s);
+    drain(s);
     hop(s);
-    expect(eventsOf(s)).toContain('fever');
+    expect(drain(s)).toContain('fever');
     expect(s.fever).toBeCloseTo(s.mods.feverTime, 1);
     const fuse = currentPlanet(s).fuse;
     runFor(s, 1);
@@ -103,23 +97,23 @@ describe('landing', () => {
   it('announces a new best once when passing the previous record', () => {
     const s = newGame(5, { bestIdx: 2 });
     hop(s);
-    expect(eventsOf(s)).not.toContain('best');
+    expect(drain(s)).not.toContain('best');
     hop(s);
-    expect(eventsOf(s)).toContain('best');
+    expect(drain(s)).toContain('best');
     expect(s.bestIdx).toBe(-1);
     hop(s);
-    expect(eventsOf(s)).not.toContain('best');
+    expect(drain(s)).not.toContain('best');
   });
 
   it('enters a new zone every planetsPerZone planets', () => {
     const s = newGame(11);
     let zoneEvents = 0;
-    for (let i = 0; i < TUNING.planetsPerZone; i++) {
+    for (let i = 0; i < WORLD.planetsPerZone; i++) {
       hop(s);
-      zoneEvents += eventsOf(s).filter((e) => e === 'zone').length;
+      zoneEvents += drain(s).filter((e) => e === 'zone').length;
     }
     expect(zoneEvents).toBe(1);
-    expect(s.zone).toBe(zoneIndex(TUNING.planetsPerZone));
+    expect(s.zone).toBe(zoneIndex(WORLD.planetsPerZone));
   });
 });
 
@@ -134,7 +128,7 @@ describe('failure', () => {
     flyUntilSettled(s);
     expect(s.dead).toBe(true);
     expect(s.deathReason).toBe('lost');
-    expect(eventsOf(s)).toContain('death');
+    expect(drain(s)).toContain('death');
   });
 
   it('dies when the planet collapses', () => {
@@ -151,7 +145,7 @@ describe('failure', () => {
     runFor(s, p.fuseMax + 0.1);
     expect(s.dead).toBe(false);
     expect(s.shield).toBe(false);
-    expect(eventsOf(s)).toContain('saved');
+    expect(drain(s)).toContain('saved');
     expect(Math.hypot(s.bx - p.x, s.by - p.y)).toBeCloseTo(p.orbit);
     runFor(s, p.fuseMax + 0.1);
     expect(s.dead).toBe(true);
@@ -240,5 +234,27 @@ describe('trail', () => {
       expect(gap).toBeGreaterThan(TUNING.trailSpacing * 0.8);
       expect(gap).toBeLessThanOrEqual(TUNING.trailSpacing + 1e-6);
     }
+  });
+});
+
+describe('retain', () => {
+  it('filters in place without allocating a new array', () => {
+    const arr = [1, 2, 3, 4, 5, 6];
+    const ref = arr;
+    retain(arr, (n) => n % 2 === 0);
+    expect(arr).toBe(ref);
+    expect(arr).toEqual([2, 4, 6]);
+    retain(arr, () => false);
+    expect(arr).toEqual([]);
+  });
+
+  it('keeps engine collections as the same arrays across frames', () => {
+    const s = newGame();
+    const { planets, particles, popups, coins } = s;
+    runFor(s, 2);
+    expect(s.planets).toBe(planets);
+    expect(s.particles).toBe(particles);
+    expect(s.popups).toBe(popups);
+    expect(s.coins).toBe(coins);
   });
 });

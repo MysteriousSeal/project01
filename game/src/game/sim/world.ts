@@ -1,4 +1,4 @@
-import { planetHue } from './palette';
+import { planetHue } from '../palette';
 import { between, type Rng } from './rng';
 
 export const WORLD = {
@@ -35,6 +35,10 @@ export const DEFAULT_RULES: Rules = {
   coinChance: 0.65,
   goldChance: 0.12,
 };
+
+export type Mods = { fuseBonus: number; magnetTime: number; feverTime: number; powerChance: number; startShield: boolean };
+
+export const DEFAULT_MODS: Mods = { fuseBonus: 0, magnetTime: 8, feverTime: 6, powerChance: 0.1, startShield: false };
 
 export const ZONES = [
   { name: 'DEEP SPACE', bg: '#0b1026' },

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { isDone, Mission, missionLabel } from '../../game/missions';
-import { C, F, RADIUS } from '../theme';
+import { isDone, Mission, missionLabel } from '../../game/meta/missions';
+import { alpha, C, CARD, F } from '../theme';
 import { ProgressBar } from './ProgressBar';
 import { Coin, Icon } from './Icon';
 
@@ -27,12 +27,12 @@ export function MissionsCard({ missions }: { missions: Mission[] }) {
 }
 
 const styles = StyleSheet.create({
-  card: { alignSelf: 'stretch', backgroundColor: '#151b3dcc', borderRadius: RADIUS.lg, padding: 12, gap: 9, borderWidth: 1, borderColor: C.line },
+  card: { ...CARD, alignSelf: 'stretch', backgroundColor: alpha(C.panel, 0.8), padding: 12, gap: 9 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   title: { color: C.text, fontSize: 15, fontWeight: '800' },
   pot: { color: C.gold, fontFamily: F.mono, fontSize: 12, fontWeight: '700' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  label: { flex: 1, color: '#ffffffdd', fontSize: 13, fontWeight: '600' },
+  label: { flex: 1, color: C.soft, fontSize: 13, fontWeight: '600' },
   num: { color: C.dim, fontFamily: F.mono, fontSize: 12 },
   doneTxt: { color: C.mint, fontWeight: '800' },
 });

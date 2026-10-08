@@ -1,9 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { attemptsLeft, CHALLENGE_ATTEMPTS, ChallengeSlot, medalsOf, nextMedal, typeOf } from '../../game/challenge';
-import { statUnit } from '../../game/challengeTypes';
-import { C, F, RADIUS } from '../theme';
+import { attemptsLeft, CHALLENGE_ATTEMPTS, ChallengeSlot, medalsOf, nextMedal, typeOf } from '../../game/meta/challenge';
+import { statUnit } from '../../game/meta/challengeTypes';
+import { alpha, C, CARD, F, RADIUS } from '../theme';
 import { Button } from './Button';
 import { Icon } from './Icon';
+import { Pips } from './Pips';
 
 type Props = { slot: ChallengeSlot; onPlay?: () => void; highlight?: boolean };
 
@@ -43,9 +44,7 @@ export function ChallengeRow({ slot, onPlay, highlight }: Props) {
           <Text style={styles.unit}>{unit}</Text>
         </View>
         <View style={styles.meta} accessible accessibilityLabel={`${left} of ${CHALLENGE_ATTEMPTS} attempts left. Best ${slot.best} ${unit}.`}>
-          <View style={styles.pips}>
-            {Array.from({ length: CHALLENGE_ATTEMPTS }, (_, i) => <View key={i} style={[styles.pip, i < left && styles.pipOn]} />)}
-          </View>
+          <Pips total={CHALLENGE_ATTEMPTS} filled={left} color={C.gold} />
           <Text style={styles.best}>Best <Text style={styles.bestVal}>{slot.best}</Text></Text>
         </View>
       </View>
@@ -54,11 +53,11 @@ export function ChallengeRow({ slot, onPlay, highlight }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { alignSelf: 'stretch', padding: 12, gap: 10, borderRadius: RADIUS.lg, backgroundColor: C.panel, borderWidth: 1, borderColor: C.line },
+  card: { ...CARD, alignSelf: 'stretch', padding: 12, gap: 10 },
   highlight: { borderColor: C.gold },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  tile: { width: 44, height: 44, borderRadius: RADIUS.md, backgroundColor: '#ffd34d1f', borderWidth: 1.5, borderColor: C.gold, alignItems: 'center', justifyContent: 'center' },
-  tileDone: { backgroundColor: '#ffffff0d', borderColor: C.line },
+  tile: { width: 44, height: 44, borderRadius: RADIUS.md, backgroundColor: alpha(C.gold, 0.12), borderWidth: 1.5, borderColor: C.gold, alignItems: 'center', justifyContent: 'center' },
+  tileDone: { backgroundColor: C.surface, borderColor: C.line },
   body: { flex: 1 },
   name: { color: C.text, fontFamily: F.display, fontWeight: '900', fontSize: 16 },
   summary: { color: C.dim, fontSize: 12, lineHeight: 16, marginTop: 1 },
@@ -70,9 +69,6 @@ const styles = StyleSheet.create({
   chipTxt: { fontFamily: F.mono, fontSize: 12, fontWeight: '700' },
   unit: { color: C.dim, fontSize: 11, fontWeight: '700' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  pips: { flexDirection: 'row', gap: 3 },
-  pip: { width: 12, height: 5, borderRadius: 3, backgroundColor: '#ffffff1f' },
-  pipOn: { backgroundColor: C.gold },
   best: { color: C.dim, fontSize: 12, fontWeight: '700' },
   bestVal: { color: C.text, fontFamily: F.mono },
 });
