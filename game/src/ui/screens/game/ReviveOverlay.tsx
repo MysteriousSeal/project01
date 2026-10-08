@@ -6,7 +6,7 @@ import { useReducedMotion } from '../../hooks';
 import { alpha, C, F, FILL, GUTTER, RADIUS } from '../../theme';
 
 /** Taps are ignored briefly so a tap meant for the game can't buy a revive. */
-const ARM_MS = 600;
+const ARM_MS = 400;
 
 type Props = { price: number; score: number; wallet: number; onRevive: () => void; onDecline: () => void };
 
@@ -15,12 +15,19 @@ export function ReviveOverlay({ price, score, wallet, onRevive, onDecline }: Pro
   const [left] = useState(() => new Animated.Value(1));
   const [pulse] = useState(() => new Animated.Value(0));
   const [armed, setArmed] = useState(false);
+  const [appear] = useState(() => new Animated.Value(0));
   const timeUp = useEffectEvent(() => onDecline());
 
+  // The buttons fade in while taps are ignored, so the guard reads as an entrance, not a disabled state.
   useEffect(() => {
     const t = setTimeout(() => setArmed(true), ARM_MS);
-    return () => clearTimeout(t);
-  }, []);
+    const fade = Animated.timing(appear, { toValue: 1, duration: still ? 0 : ARM_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    fade.start();
+    return () => {
+      clearTimeout(t);
+      fade.stop();
+    };
+  }, [appear, still]);
 
   useEffect(() => {
     const countdown = Animated.timing(left, { toValue: 0, duration: REVIVE_SECONDS * 1000, easing: Easing.linear, useNativeDriver: false });
@@ -47,12 +54,12 @@ export function ReviveOverlay({ price, score, wallet, onRevive, onDecline }: Pro
         <View style={styles.track}>
           <Animated.View style={[styles.bar, { width: left.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
         </View>
-        <View style={[styles.actions, !armed && styles.waiting]}>
+        <Animated.View style={[styles.actions, { opacity: appear, transform: [{ translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
           <Animated.View style={{ transform: [{ scale }] }}>
             <Button label="REVIVE" price={price} variant="gold" size="lg" onPress={armed ? onRevive : () => {}} accessibilityLabel={`Revive for ${price} coins. You have ${wallet}.`} />
           </Animated.View>
           <Button label="NO THANKS" variant="secondary" size="lg" onPress={armed ? onDecline : () => {}} />
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -67,5 +74,4 @@ const styles = StyleSheet.create({
   track: { alignSelf: 'stretch', height: 6, borderRadius: 3, backgroundColor: C.track, overflow: 'hidden', marginTop: 4 },
   bar: { height: 6, borderRadius: 3, backgroundColor: C.gold },
   actions: { alignSelf: 'stretch', alignItems: 'center', gap: 14, marginTop: 6 },
-  waiting: { opacity: 0.5 },
 });
