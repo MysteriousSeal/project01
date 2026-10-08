@@ -2,7 +2,8 @@ import { describe, expect, it } from '@jest/globals';
 import { CHALLENGE_TYPES, challengeTypeById } from '../../src/game/meta/challengeTypes';
 import { cleanName, normalizeSave } from '../../src/game/meta/save';
 import { startRun } from '../../src/game/meta/session';
-import { isPlausibleRun, runRow, uuid } from '../../src/game/meta/stats';
+import { boardValue, isPlausibleRun, runRow, uuid } from '../../src/game/meta/stats';
+import { xpForLevel } from '../../src/game/meta/progress';
 import { createState, launchDir, planetOf, runResult, step, tap } from '../../src/game/sim/engine';
 import { seededRng } from '../../src/game/sim/rng';
 import { BATCH_SIZE, KeyValue, Outbox, OutboxItem } from '../../src/services/outbox';
@@ -336,5 +337,34 @@ describe('ledger in the outbox', () => {
     expect(api.inserted).toEqual([]);
     await t.logLedger([{ id: 'l1', kind: 'earn', source: 'run', amount: 3, wallet_after: 3, detail: { run_id: 'r1' } }]);
     expect(api.inserted).toEqual([['ledger', ['l1']]]);
+  });
+});
+
+describe('level and games boards', () => {
+  it('shows level from total XP and pluralizes games', () => {
+    expect(boardValue({ kind: 'level' }, 0)).toEqual({ main: 'LV 1', sub: '0 XP' });
+    expect(boardValue({ kind: 'level' }, xpForLevel(1) + xpForLevel(2))).toEqual({ main: 'LV 3', sub: `${xpForLevel(1) + xpForLevel(2)} XP` });
+    expect(boardValue({ kind: 'level' }, 12345).sub).toBe('12,345 XP');
+    expect(boardValue({ kind: 'games' }, 1)).toEqual({ main: '1', sub: 'game' });
+    expect(boardValue({ kind: 'games' }, 1500)).toEqual({ main: '1,500', sub: 'games' });
+    expect(boardValue({ kind: 'all' }, 88)).toEqual({ main: '88', sub: null });
+    expect(boardValue({ kind: 'daily', day: 'd', type: 'coins' }, 40, true)).toEqual({ main: '40', sub: 'coins' });
+  });
+
+  it('requests the new boards without day or challenge', async () => {
+    const calls: unknown[] = [];
+    const client = {
+      auth: { getSession: async () => ({ data: { session: { user: { id: 'u1' } } } }) },
+      rpc: async (fn: string, args: unknown) => {
+        calls.push([fn, args]);
+        return { data: [], error: null };
+      },
+    } as unknown as Parameters<typeof supabaseStats>[0];
+    await supabaseStats(client).leaderboard({ kind: 'level' });
+    await supabaseStats(client).leaderboard({ kind: 'games' });
+    expect(calls).toEqual([
+      ['leaderboard', { board: 'level', board_day: null, board_type: null, max_rows: 50 }],
+      ['leaderboard', { board: 'games', board_day: null, board_type: null, max_rows: 50 }],
+    ]);
   });
 });

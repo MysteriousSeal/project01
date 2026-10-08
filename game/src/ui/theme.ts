@@ -19,4 +19,4 @@ export const CARD = { backgroundColor: C.panel, borderRadius: RADIUS.lg, borderW
 
 export const FILL = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const;
 
-export const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+export { fmt } from '../game/format';

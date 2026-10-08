@@ -1,4 +1,6 @@
 import type { RunResult } from '../sim/engine';
+import { levelInfo } from './progress';
+import { fmt } from '../format';
 import type { RunConfig } from './session';
 
 export type RunRow = {
@@ -18,9 +20,18 @@ export type RunRow = {
 
 export type SessionRow = { id: string; started_at: string; ended_at: string; platform: string };
 
-export type Board = { kind: 'all' } | { kind: 'week' } | { kind: 'daily'; day: string; type: string };
+export type Board = { kind: 'all' } | { kind: 'week' } | { kind: 'level' } | { kind: 'games' } | { kind: 'daily'; day: string; type: string };
 
 export type BoardEntry = { rank: number; name: string; value: number; me: boolean };
+
+export function boardValue(board: Board, value: number, coins = false): { main: string; sub: string | null } {
+  if (board.kind === 'level') {
+    const { lvl } = levelInfo(value);
+    return { main: `LV ${lvl}`, sub: `${fmt(value)} XP` };
+  }
+  if (board.kind === 'games') return { main: fmt(value), sub: value === 1 ? 'game' : 'games' };
+  return { main: fmt(value), sub: coins ? 'coins' : null };
+}
 
 export function runRow(id: string, config: RunConfig, r: RunResult, day: string | null): RunRow {
   const daily = config.mode === 'daily' && config.challenge !== undefined;
