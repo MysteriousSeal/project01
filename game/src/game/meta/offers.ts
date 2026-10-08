@@ -7,7 +7,7 @@ import { grant, OfferItem, owns, priceOf, ShopResult } from './shop';
 export const DEAL_DISCOUNT = 0.5;
 export const MYSTERY_PRICE = 250;
 
-const discounted = (price: number, discount: number) => Math.max(1, Math.round(price * (1 - discount)));
+export const discounted = (price: number, discount: number) => Math.max(1, Math.round((price * Math.round((1 - discount) * 100)) / 100));
 
 const PAID: OfferItem[] = COSMETIC_KINDS.flatMap((kind) => CATALOG[kind].items.filter((i) => i.price > 0).map((i) => ({ kind, id: i.id })));
 

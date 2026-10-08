@@ -314,3 +314,27 @@ describe('supabaseStats adapter', () => {
     expect(calls.upsert).toEqual([['profiles', { user_id: 'u1', display_name: 'Nova' }, { onConflict: 'user_id' }]]);
   });
 });
+
+describe('ledger in the outbox', () => {
+  it('sends runs before the ledger entries that reference them', async () => {
+    const box = new Outbox(memory());
+    await box.add({ table: 'sessions', row: { id: 's' } });
+    await box.add({ table: 'ledger', row: { id: 'l' } });
+    await box.add(runItem('r'));
+    const order: string[] = [];
+    await box.drain(async (table) => {
+      order.push(table);
+      return 'ok';
+    });
+    expect(order).toEqual(['runs', 'ledger', 'sessions']);
+  });
+
+  it('logs ledger entries through telemetry', async () => {
+    const api = fakeStats();
+    const t = new Telemetry(api, new Outbox(memory()), 'ios');
+    await t.logLedger([]);
+    expect(api.inserted).toEqual([]);
+    await t.logLedger([{ id: 'l1', kind: 'earn', source: 'run', amount: 3, wallet_after: 3, detail: { run_id: 'r1' } }]);
+    expect(api.inserted).toEqual([['ledger', ['l1']]]);
+  });
+});

@@ -30,6 +30,7 @@ export type Save = {
   settings: Settings;
   savedAt: number;
   name: string;
+  ledgerStarted: boolean;
 };
 
 export type Settings = { ghost: boolean };
@@ -60,6 +61,7 @@ export const defaultSave = (): Save => ({
   settings: defaultSettings(),
   savedAt: 0,
   name: '',
+  ledgerStarted: false,
 });
 
 type Raw = Record<string, unknown>;
@@ -162,5 +164,6 @@ export function normalizeSave(input: unknown): Save {
     settings: settings(r.settings),
     savedAt: count(r.savedAt),
     name: cleanName(text(r.name)) ?? '',
+    ledgerStarted: r.ledgerStarted === true,
   };
 }

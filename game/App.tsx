@@ -1,6 +1,6 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { currentChallenges, isOpen } from './src/game/meta/challenge';
 import { skinById, themeById, trailById } from './src/game/meta/cosmetics';
@@ -14,6 +14,7 @@ import { haptic, hapticForEvent } from './src/services/haptics';
 import { loadSave, writeSave } from './src/services/storage';
 import { useCloudSync } from './src/services/useCloudSync';
 import { telemetry, useTelemetry } from './src/services/useTelemetry';
+import { ChangeReason, diffLedger, openingEntry } from './src/game/meta/ledger';
 import { runRow, uuid } from './src/game/meta/stats';
 import { TabBar, TabId } from './src/ui/components/TabBar';
 import { DailyScreen } from './src/ui/screens/DailyScreen';
@@ -52,6 +53,16 @@ export default function App() {
   useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
   useTelemetry(save?.name ?? '');
 
+  const needsOpening = save !== null && !save.ledgerStarted && telemetry !== null;
+  const startLedger = useEffectEvent(() => {
+    if (!save || save.ledgerStarted) return;
+    if (save.wallet > 0) void telemetry?.logLedger([openingEntry(save, uuid())]);
+    setSave(touch({ ...save, ledgerStarted: true }));
+  });
+  useEffect(() => {
+    if (needsOpening) startLedger();
+  }, [needsOpening]);
+
   const loaded = save !== null;
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
@@ -70,7 +81,10 @@ export default function App() {
 
   if (!save) return <View style={styles.root} />;
 
-  const update = (next: Save) => setSave(touch(next));
+  const update = (next: Save, reason: ChangeReason = { source: 'other' }) => {
+    void telemetry?.logLedger(diffLedger(save, next, reason, uuid));
+    setSave(touch(next));
+  };
 
   const goTab = (t: TabId) => {
     setTab(t);
@@ -95,8 +109,9 @@ export default function App() {
   const finishRun = (result: RunResult) => {
     if (!run) return;
     const report = applyRun(save, result, { mode: run.config.mode, challenge: run.config.challenge?.id });
-    update(report.save);
-    void telemetry?.logRun(runRow(uuid(), run.config, result, save.challenges.day || null));
+    const runId = uuid();
+    void telemetry?.logRun(runRow(runId, run.config, result, save.challenges.day || null));
+    update(report.save, { source: 'run', runId });
     setOutcome({ result, report });
     if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
   };
@@ -104,7 +119,7 @@ export default function App() {
   const claim = () => {
     const next = claimDaily(save);
     if (!next) return;
-    update(next);
+    update(next, { source: 'daily_reward' });
     haptic('success');
   };
 
@@ -122,13 +137,13 @@ export default function App() {
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
             {tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
             {tab === 'ranks' && <RanksScreen save={save} />}
-            {tab === 'shop' && <ShopScreen save={save} onChange={update} />}
+            {tab === 'shop' && <ShopScreen save={save} onChange={(next) => update(next, { source: 'shop' })} />}
             {tab === 'settings' && (
               <SettingsScreen
                 save={save}
                 onChange={(settings) => update({ ...save, settings })}
                 onRename={(name) => update({ ...save, name })}
-                onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }) : undefined}
+                onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }, { source: 'dev' }) : undefined}
               />
             )}
           </View>

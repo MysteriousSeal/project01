@@ -1,4 +1,6 @@
-export type OutboxTable = 'runs' | 'sessions';
+export type OutboxTable = 'runs' | 'ledger' | 'sessions';
+
+const TABLES: OutboxTable[] = ['runs', 'ledger', 'sessions'];
 export type OutboxItem = { table: OutboxTable; row: Record<string, unknown> & { id: string } };
 export type KeyValue = { get: () => Promise<string | null>; set: (value: string) => Promise<void> };
 export type SendResult = 'ok' | 'retry' | 'reject';
@@ -10,7 +12,7 @@ export const BATCH_SIZE = 50;
 function parse(raw: string | null): OutboxItem[] {
   try {
     const items = raw ? JSON.parse(raw) : [];
-    return Array.isArray(items) ? items.filter((i) => i && (i.table === 'runs' || i.table === 'sessions') && typeof i.row?.id === 'string') : [];
+    return Array.isArray(items) ? items.filter((i) => i && TABLES.includes(i.table) && typeof i.row?.id === 'string') : [];
   } catch {
     return [];
   }
@@ -54,7 +56,7 @@ export class Outbox {
 
   private async drainAll(send: Send) {
     await this.ready;
-    for (const table of ['runs', 'sessions'] as const) {
+    for (const table of TABLES) {
       for (;;) {
         const batch = this.items.filter((i) => i.table === table).slice(0, BATCH_SIZE);
         if (!batch.length) break;

@@ -1,3 +1,4 @@
+import type { LedgerEntry } from '../game/meta/ledger';
 import type { RunRow, SessionRow } from '../game/meta/stats';
 import { isPlausibleRun, uuid } from '../game/meta/stats';
 import { Outbox } from './outbox';
@@ -30,6 +31,12 @@ export class Telemetry {
   async logRun(row: RunRow) {
     if (!isPlausibleRun(row)) return;
     await this.outbox.add({ table: 'runs', row });
+    await this.flush();
+  }
+
+  async logLedger(entries: LedgerEntry[]) {
+    if (!entries.length) return;
+    for (const row of entries) await this.outbox.add({ table: 'ledger', row });
     await this.flush();
   }
 
