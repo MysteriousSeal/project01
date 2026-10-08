@@ -42,3 +42,7 @@ yarn-error.*
 
 # local agent tooling
 .claude-flow/
+
+# python
+__pycache__/
+*.pyc
