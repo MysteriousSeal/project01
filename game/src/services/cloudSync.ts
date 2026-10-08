@@ -1,8 +1,10 @@
-import { resolveSave } from '../game/meta/sync';
+import { resolveSave, SaveSource, touch } from '../game/meta/sync';
 import type { Save } from '../game/meta/save';
 import type { CloudApi } from './cloudApi';
 
 export const PUSH_DELAY_MS = 2500;
+
+export type ChooseSave = (local: Save, remote: Save) => Promise<SaveSource>;
 
 export class CloudSync {
   private userId: string | null = null;
@@ -18,14 +20,26 @@ export class CloudSync {
     private delayMs = PUSH_DELAY_MS,
   ) {}
 
-  async start(local: Save) {
+  async start(local: Save, choose?: ChooseSave) {
     this.latest = this.latest ?? local;
     const userId = await this.api.signIn().catch(() => null);
     if (!userId || this.stopped) return;
     this.userId = userId;
     const remote = await this.api.pull(userId).catch(() => null);
     if (this.stopped) return;
-    const { save, source } = resolveSave(this.latest, remote);
+    if (remote && choose) {
+      const picked = await choose(this.latest, remote);
+      if (this.stopped) return;
+      if (picked === 'local') {
+        const kept = touch(this.latest, Math.max(Date.now(), remote.savedAt + 1));
+        this.latest = kept;
+        this.pushedAt = remote.savedAt;
+        this.adopt(kept);
+        await this.flush();
+        return;
+      }
+    }
+    const { save, source } = remote && choose ? { save: remote, source: 'remote' as const } : resolveSave(this.latest, remote);
     if (source === 'remote') {
       this.pushedAt = save.savedAt;
       this.latest = save;

@@ -1,18 +1,21 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useEffectEvent, useState } from 'react';
-import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { currentChallenges, isOpen } from './src/game/meta/challenge';
 import { skinById, themeById, trailById } from './src/game/meta/cosmetics';
 import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
 import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
 import { Save } from './src/game/meta/save';
 import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
-import { touch } from './src/game/meta/sync';
+import { progressSummary, recommendedSource, SaveSource, touch } from './src/game/meta/sync';
 import type { RunResult } from './src/game/sim/engine';
 import { haptic, hapticForEvent } from './src/services/haptics';
 import { loadSave, writeSave } from './src/services/storage';
+import { supabaseAccount } from './src/services/account';
+import { supabase } from './src/services/supabase';
 import { useCloudSync } from './src/services/useCloudSync';
+import { AccountSection } from './src/ui/screens/AccountSection';
 import { telemetry, useTelemetry } from './src/services/useTelemetry';
 import { ChangeReason, diffLedger, openingEntry } from './src/game/meta/ledger';
 import { runRow, uuid } from './src/game/meta/stats';
@@ -27,6 +30,27 @@ import { ShopScreen } from './src/ui/screens/shop/ShopScreen';
 import { C } from './src/ui/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const accountApi = supabase ? supabaseAccount(supabase) : null;
+
+const describe = (s: Save) => {
+  const p = progressSummary(s);
+  return `Level ${p.level} · ${p.wallet} coins · best ${p.best} · ${p.games} games`;
+};
+
+const chooseProgress = (local: Save, remote: Save) =>
+  new Promise<SaveSource>((resolve) => {
+    const best = recommendedSource(local, remote);
+    Alert.alert(
+      'Choose your progress',
+      `This account already has progress.\n\nAccount: ${describe(remote)}\nThis phone: ${describe(local)}\n\nThe other one will be replaced.`,
+      [
+        { text: best === 'local' ? 'Keep this phone (recommended)' : 'Keep this phone', onPress: () => resolve('local') },
+        { text: best === 'remote' ? 'Use account progress (recommended)' : 'Use account progress', onPress: () => resolve('remote'), style: 'default' },
+      ],
+      { cancelable: false },
+    );
+  });
 
 type Run = { id: number; config: RunConfig };
 type Outcome = { result: RunResult; report: RunReport };
@@ -50,7 +74,7 @@ export default function App() {
     if (save) writeSave(save);
   }, [save]);
 
-  useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
+  const switchAccount = useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
   useTelemetry(save?.name ?? '');
 
   const needsOpening = save !== null && !save.ledgerStarted && telemetry !== null;
@@ -143,6 +167,7 @@ export default function App() {
                 save={save}
                 onChange={(settings) => update({ ...save, settings })}
                 onRename={(name) => update({ ...save, name })}
+                account={accountApi && <AccountSection api={accountApi} beforeAuth={async () => void (await telemetry?.flush())} onSwitched={() => switchAccount(chooseProgress)} />}
                 onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }, { source: 'dev' }) : undefined}
               />
             )}

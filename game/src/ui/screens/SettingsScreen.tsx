@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { cleanName, Save, Settings } from '../../game/meta/save';
 import { Button } from '../components/Button';
@@ -6,13 +6,13 @@ import { Icon } from '../components/Icon';
 import { Page, SectionLabel } from '../components/Page';
 import { alpha, C, CARD, RADIUS } from '../theme';
 
-type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void };
+type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; account?: ReactNode };
 
 export const DEV_COINS = 100;
 
 const OFF_TRACK = alpha(C.text, 0.15);
 
-export function SettingsScreen({ save, onChange, onRename, onAddCoins }: Props) {
+export function SettingsScreen({ save, onChange, onRename, onAddCoins, account }: Props) {
   const { settings } = save;
   const [draft, setDraft] = useState(save.name);
   const [invalid, setInvalid] = useState(false);
@@ -54,6 +54,8 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins }: Props) 
           </Text>
         </View>
       </View>
+
+      {account}
 
       <SectionLabel>GAMEPLAY</SectionLabel>
       <View style={styles.card}>

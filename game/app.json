@@ -9,7 +9,8 @@
     "backgroundColor": "#0b1026",
     "ios": {
       "supportsTablet": true,
-      "backgroundColor": "#0b1026"
+      "backgroundColor": "#0b1026",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -43,7 +44,8 @@
         }
       ],
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-apple-authentication"
     ]
   }
 }
