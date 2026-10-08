@@ -53,6 +53,11 @@ export function startChallenge(c: DailyChallenges, type: string, now: Date = new
   return slot && attemptsLeft(slot) > 0 ? withSlot(cur, { ...slot, attempts: slot.attempts + 1 }) : null;
 }
 
+export function resetAttempts(c: DailyChallenges, now: Date = new Date()): DailyChallenges {
+  const cur = currentChallenges(c, now);
+  return { ...cur, slots: cur.slots.map((s) => ({ ...s, attempts: 0 })) };
+}
+
 export type ChallengeOutcome = { type: string; value: number; attempt: number; attemptsLeft: number; best: number; medal: number; newMedals: Medal[]; reward: number; streak: number };
 
 export function recordChallenge(c: DailyChallenges, type: string, r: RunResult, now: Date = new Date()): { challenges: DailyChallenges; outcome: ChallengeOutcome } | null {

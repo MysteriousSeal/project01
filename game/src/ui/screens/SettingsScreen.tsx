@@ -6,13 +6,13 @@ import { Icon } from '../components/Icon';
 import { Page, SectionLabel } from '../components/Page';
 import { alpha, C, CARD, RADIUS } from '../theme';
 
-type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; account?: ReactNode };
+type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; account?: ReactNode };
 
 export const DEV_COINS = 100;
 
 const OFF_TRACK = alpha(C.text, 0.15);
 
-export function SettingsScreen({ save, onChange, onRename, onAddCoins, account }: Props) {
+export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAttempts, account }: Props) {
   const { settings } = save;
   const [draft, setDraft] = useState(save.name);
   const [invalid, setInvalid] = useState(false);
@@ -76,9 +76,9 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, account }
         </View>
       </View>
 
+      {__DEV__ && (onAddCoins || onResetAttempts) && <SectionLabel>DEVELOPER · DEV BUILDS ONLY</SectionLabel>}
       {__DEV__ && onAddCoins && (
         <>
-          <SectionLabel>DEVELOPER · DEV BUILDS ONLY</SectionLabel>
           <View style={[styles.card, styles.row]}>
             <Icon name="coins" size={20} color={C.gold} style={styles.rowIcon} />
             <View style={styles.body}>
@@ -88,6 +88,16 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, account }
             <Button label={`+${DEV_COINS}`} variant="gold" onPress={() => onAddCoins(DEV_COINS)} accessibilityLabel={`Add ${DEV_COINS} coins`} style={styles.btn} />
           </View>
         </>
+      )}
+      {__DEV__ && onResetAttempts && (
+        <View style={[styles.card, styles.row]}>
+          <Icon name="rotate-right" size={20} color={C.gold} style={styles.rowIcon} />
+          <View style={styles.body}>
+            <Text style={styles.label}>Reset daily attempts</Text>
+            <Text style={styles.desc}>Gives back all attempts for today&apos;s challenges. Best scores and medals stay.</Text>
+          </View>
+          <Button label="Reset" variant="gold" onPress={onResetAttempts} accessibilityLabel="Reset daily challenge attempts" style={styles.btn} />
+        </View>
       )}
     </Page>
   );

@@ -2,7 +2,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useEffectEvent, useState } from 'react';
 import { Alert, BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { currentChallenges, isOpen } from './src/game/meta/challenge';
+import { currentChallenges, isOpen, resetAttempts } from './src/game/meta/challenge';
 import { skinById, themeById, trailById } from './src/game/meta/cosmetics';
 import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
 import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
@@ -169,6 +169,7 @@ export default function App() {
                 onRename={(name) => update({ ...save, name })}
                 account={accountApi && <AccountSection api={accountApi} beforeAuth={async () => void (await telemetry?.flush())} onSwitched={() => switchAccount(chooseProgress)} />}
                 onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }, { source: 'dev' }) : undefined}
+                onResetAttempts={__DEV__ ? () => update({ ...save, challenges: resetAttempts(save.challenges) }) : undefined}
               />
             )}
           </View>
