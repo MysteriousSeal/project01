@@ -8,9 +8,11 @@ import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
 import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
 import { Save } from './src/game/meta/save';
 import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
+import { touch } from './src/game/meta/sync';
 import type { RunResult } from './src/game/sim/engine';
 import { haptic, hapticForEvent } from './src/services/haptics';
 import { loadSave, writeSave } from './src/services/storage';
+import { useCloudSync } from './src/services/useCloudSync';
 import { TabBar, TabId } from './src/ui/components/TabBar';
 import { DailyScreen } from './src/ui/screens/DailyScreen';
 import { GameOverScreen } from './src/ui/screens/GameOverScreen';
@@ -44,6 +46,8 @@ export default function App() {
     if (save) writeSave(save);
   }, [save]);
 
+  useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
+
   const loaded = save !== null;
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
@@ -62,6 +66,8 @@ export default function App() {
 
   if (!save) return <View style={styles.root} />;
 
+  const update = (next: Save) => setSave(touch(next));
+
   const goTab = (t: TabId) => {
     setTab(t);
     setRun(null);
@@ -71,7 +77,7 @@ export default function App() {
   const play = (mode: RunMode, type?: string) => {
     const started = startRun(save, mode, type);
     if (!started) return;
-    setSave(started.save);
+    update(started.save);
     setOutcome(null);
     setRun((r) => ({ id: (r?.id ?? 0) + 1, config: started.config }));
   };
@@ -85,7 +91,7 @@ export default function App() {
   const finishRun = (result: RunResult) => {
     if (!run) return;
     const report = applyRun(save, result, { mode: run.config.mode, challenge: run.config.challenge?.id });
-    setSave(report.save);
+    update(report.save);
     setOutcome({ result, report });
     if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
   };
@@ -93,7 +99,7 @@ export default function App() {
   const claim = () => {
     const next = claimDaily(save);
     if (!next) return;
-    setSave(next);
+    update(next);
     haptic('success');
   };
 
@@ -110,12 +116,12 @@ export default function App() {
           <View style={styles.page}>
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
             {tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
-            {tab === 'shop' && <ShopScreen save={save} onChange={setSave} />}
+            {tab === 'shop' && <ShopScreen save={save} onChange={update} />}
             {tab === 'settings' && (
               <SettingsScreen
                 save={save}
-                onChange={(settings) => setSave({ ...save, settings })}
-                onAddCoins={__DEV__ ? (amount) => setSave({ ...save, wallet: save.wallet + amount }) : undefined}
+                onChange={(settings) => update({ ...save, settings })}
+                onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }) : undefined}
               />
             )}
           </View>
