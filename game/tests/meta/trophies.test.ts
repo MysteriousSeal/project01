@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { diffLedger } from '../../src/game/meta/ledger';
-import { applyRun, shortOfBest } from '../../src/game/meta/progress';
+import { MEDAL_TIERS } from '../../src/game/meta/challenge';
+import { missionReward, MISSION_SLOTS } from '../../src/game/meta/missions';
+import { applyRun, levelUpReward, RUN_BONUS_MAX, shortOfBest } from '../../src/game/meta/progress';
 import { normalizeSave } from '../../src/game/meta/save';
 import { addRunStats, awardTrophies, emptyStats, TROPHIES, TROPHY_COUNT, TROPHY_TIERS, trophiesDue, trophiesEarned, trophyProgress } from '../../src/game/meta/trophies';
 import { seededRng } from '../../src/game/sim/rng';
@@ -94,7 +96,7 @@ describe('trophies', () => {
     const report = applyRun(veteran, result({ score: 1, planets: 1 }), { rng: seededRng(1) });
     const entries = diffLedger(veteran, report.save, { source: 'run', runId: 'r' }, () => 'e');
     const run = entries.find((e) => e.source === 'run');
-    expect(run?.amount ?? 0).toBeLessThanOrEqual(2000);
+    expect(run?.amount ?? 0).toBeLessThanOrEqual(RUN_BONUS_MAX);
     expect(entries.find((e) => e.source === 'trophy')?.amount).toBe(report.trophies.reduce((a, u) => a + u.reward, 0));
   });
 });
@@ -120,6 +122,16 @@ describe('trophies reached outside a run', () => {
     expect(diffLedger(prev, { ...prev, wallet: 130 }, { source: 'daily_reward' }, () => 'd')).toEqual([
       expect.objectContaining({ source: 'daily_reward', amount: 30, wallet_after: 130 }),
     ]);
+  });
+});
+
+describe('run bonus limit', () => {
+  it('covers the largest honest bonus up to level 500', () => {
+    const medals = MEDAL_TIERS.reduce((a, m) => a + m.reward, 0);
+    for (const lvl of [1, 50, 96, 200, 500]) {
+      const worst = MISSION_SLOTS * missionReward(lvl) + levelUpReward(lvl, lvl + 1) + medals;
+      expect(worst).toBeLessThanOrEqual(RUN_BONUS_MAX);
+    }
   });
 });
 

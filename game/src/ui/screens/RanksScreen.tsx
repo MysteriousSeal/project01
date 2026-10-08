@@ -6,7 +6,7 @@ import { challengeTypesFor, statUnit } from '../../game/meta/challengeTypes';
 import { Save } from '../../game/meta/save';
 import { Board, BoardEntry, boardValue } from '../../game/meta/stats';
 import { useLeaderboard } from '../../services/hooks/useLeaderboards';
-import { statsApi } from '../../services/hooks/useTelemetry';
+import { statsApi } from '../../services/instances';
 import { Coin, Icon } from '../components/Icon';
 import { Page, SectionLabel } from '../components/Page';
 import { useReducedMotion } from '../hooks';

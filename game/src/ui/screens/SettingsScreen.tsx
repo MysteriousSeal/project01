@@ -1,16 +1,15 @@
 import { ReactNode, useState } from 'react';
-import { StyleSheet, Switch, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { cleanName, Save, Settings } from '../../game/meta/save';
 import { Button } from '../components/Button';
 import { Page, SectionLabel } from '../components/Page';
 import { SettingRow } from '../components/SettingRow';
-import { alpha, C, CARD, FIELD } from '../theme';
+import { Toggle } from '../components/Toggle';
+import { C, CARD, FIELD } from '../theme';
 
 type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; account?: ReactNode; onBack: () => void };
 
 export const DEV_COINS = 100;
-
-const OFF_TRACK = alpha(C.text, 0.15);
 
 export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAttempts, account, onBack }: Props) {
   const { settings } = save;
@@ -62,14 +61,7 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
       <SectionLabel>GAMEPLAY</SectionLabel>
       <View style={[styles.card, styles.stack]}>
         <SettingRow icon="volume-high" color={settings.sound ? C.mint : C.dim} label="Sound effects" desc="Follows your phone's silent switch.">
-          <Switch
-            value={settings.sound}
-            onValueChange={(sound) => onChange({ ...settings, sound })}
-            trackColor={{ false: OFF_TRACK, true: C.mint }}
-            thumbColor={C.text}
-            ios_backgroundColor={OFF_TRACK}
-            accessibilityLabel="Sound effects"
-          />
+          <Toggle value={settings.sound} onChange={(sound) => onChange({ ...settings, sound })} label="Sound effects" />
         </SettingRow>
         <View style={styles.divider} />
         <SettingRow
@@ -78,14 +70,7 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
           label="Ghost of your best run"
           desc="Race a replay of your best run. In daily challenges, it replays your best attempt of the day."
         >
-          <Switch
-            value={settings.ghost}
-            onValueChange={(ghost) => onChange({ ...settings, ghost })}
-            trackColor={{ false: OFF_TRACK, true: C.mint }}
-            thumbColor={C.text}
-            ios_backgroundColor={OFF_TRACK}
-            accessibilityLabel="Ghost of your best run"
-          />
+          <Toggle value={settings.ghost} onChange={(ghost) => onChange({ ...settings, ghost })} label="Ghost of your best run" />
         </SettingRow>
       </View>
 

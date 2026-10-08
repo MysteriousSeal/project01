@@ -1,7 +1,12 @@
 import { dayKey, yesterdayKey } from './calendar';
 import type { Save } from './save';
 
-export const dailyReward = (streak: number) => 15 + Math.min(streak, 7) * 10;
+const MAX_STREAK_BONUS_DAYS = 7;
+
+export const dailyReward = (streak: number) => 15 + Math.min(streak, MAX_STREAK_BONUS_DAYS) * 10;
+
+/** Largest single daily reward; the server flags anything above it. */
+export const DAILY_REWARD_MAX = dailyReward(MAX_STREAK_BONUS_DAYS);
 
 export function dailyStatus(save: Save, now: Date = new Date()) {
   const today = dayKey(now);

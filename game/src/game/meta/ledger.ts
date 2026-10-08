@@ -1,7 +1,7 @@
 import { BOOSTS } from './boosts';
 import { CATALOG, COSMETIC_KINDS } from './cosmetics';
 import { BUNDLES } from './offers';
-import { tierOf, TROPHIES, TROPHY_TIERS } from './trophies';
+import { awardTrophies, tierOf, TROPHIES, TROPHY_TIERS } from './trophies';
 import type { Save } from './save';
 import type { OfferItem } from './shop';
 import { UPGRADES } from './upgrades';
@@ -85,3 +85,19 @@ function walletEntries(prev: Save, next: Save, walletAfter: number, reason: Chan
 }
 
 export const openingEntry = (save: Save, id: string): LedgerEntry => ({ id, kind: 'earn', source: 'opening', amount: save.wallet, wallet_after: save.wallet, detail: {} });
+
+/**
+ * Prepares a save arriving from the device or the cloud: starts its ledger with the wallet it
+ * already has (when a ledger is kept), then rewards trophies its records already reach.
+ */
+export function settleArrival(arrived: Save, keepLedger: boolean, newId: () => string) {
+  const entries: LedgerEntry[] = [];
+  let save = arrived;
+  if (keepLedger && !save.ledgerStarted) {
+    if (save.wallet > 0) entries.push(openingEntry(save, newId()));
+    save = { ...save, ledgerStarted: true };
+  }
+  const awarded = awardTrophies(save);
+  if (keepLedger) entries.push(...diffLedger(save, awarded.save, { source: 'trophy' }, newId));
+  return { save: awarded.save, entries, trophies: awarded.unlocked.length, changed: awarded.save !== arrived };
+}

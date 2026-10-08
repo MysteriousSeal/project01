@@ -1,42 +1,18 @@
-import { MAX_TRACK, Track, TRACK_END } from './ghost';
 import { C, hsl } from '../palette';
-import { between, type Rng } from './rng';
+import { banner, burst, extendTrail, Particle, Popup, popup, tickEffects } from './effects';
+import { MAX_TRACK, Track, TRACK_END } from './ghost';
+import { retain } from './retain';
+import { type Rng } from './rng';
+import { TUNING } from './tuning';
 import { Coin, Comet, cometFor, DEFAULT_MODS, DEFAULT_RULES, inGap, makePlanet, Mods, pickupFor, Planet, PowerKind, PowerUp, Rules, zoneIndex, ZONES } from './world';
+
+export type { Particle, Popup } from './effects';
+export { retain } from './retain';
+export { TUNING } from './tuning';
 
 export { DEFAULT_MODS, DEFAULT_RULES, inGap, isBossIndex, WORLD, zoneIndex, zoneOf, ZONES } from './world';
 export type { Coin, Comet, Mods, Planet, PowerKind, PowerUp, Rules } from './world';
 
-export const TUNING = {
-  launchSpeed: 780,
-  captureTolerance: 12,
-  feverCaptureTolerance: 30,
-  perfectRatio: 0.55,
-  maxFlightTime: 1.8,
-  offscreenMargin: 30,
-  planetsAhead: 4,
-  cameraAnchor: 0.65,
-  cameraFollow: 4,
-  trailLength: 18,
-  trailSpacing: 10,
-  coinRadius: 26,
-  powerRadius: 32,
-  magnetRange: 190,
-  magnetPull: 650,
-  goldCoins: 5,
-  milestoneEvery: 25,
-  maxParticles: 240,
-  bossBonus: 10,
-  bossCoins: 15,
-  slowmoTime: 1.2,
-  slowmoScale: 0.35,
-  cometSpeed: 220,
-  cometRadius: 38,
-  cometCoins: 10,
-  cometSlowmo: 0.8,
-} as const;
-
-export type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number };
-export type Popup = { x: number; y: number; text: string; life: number; color: string; coins?: boolean };
 
 export type GameEvent = 'launch' | 'land' | 'perfect' | 'coin' | 'death' | 'milestone' | 'fever' | 'power' | 'saved' | 'best' | 'zone' | 'boss' | 'ghost' | 'comet' | 'revive';
 
@@ -161,11 +137,6 @@ export const runResult = (s: State): RunResult => ({
 export const isSettled = (s: State) => s.dead && s.particles.length === 0 && s.popups.length === 0;
 export const ghostActive = (s: State) => !s.ghostDone;
 
-export function retain<T>(arr: T[], keep: (x: T) => boolean) {
-  let n = 0;
-  for (let i = 0; i < arr.length; i++) if (keep(arr[i])) arr[n++] = arr[i];
-  arr.length = n;
-}
 
 function ensurePlanets(s: State) {
   let last = s.planets[s.planets.length - 1];
@@ -191,19 +162,7 @@ function addCoins(s: State, n: number) {
   return gained;
 }
 
-function burst(s: State, x: number, y: number, color: string, n: number, speed = 220) {
-  for (let i = 0; i < n; i++) {
-    const a = s.fx() * Math.PI * 2;
-    const v = between(s.fx, speed * 0.3, speed);
-    const max = between(s.fx, 0.35, 0.7);
-    s.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: max, max, color, size: between(s.fx, 3, 7) });
-  }
-  const extra = s.particles.length - TUNING.maxParticles;
-  if (extra > 0) s.particles.splice(0, extra);
-}
 
-const popup = (s: State, x: number, y: number, text: string, color: string, life = 1, coins = false) => s.popups.push({ x, y, text, color, life, coins });
-const banner = (s: State, screenY: number, text: string, color: string, life: number) => popup(s, s.W / 2, s.camY + s.H * screenY, text, color, life);
 
 const record = (s: State, idx: number) => {
   if (s.landings.length < MAX_TRACK) s.landings.push([s.t, idx]);
@@ -443,20 +402,6 @@ function collectPickups(s: State, dt: number) {
   }
 }
 
-function extendTrail(s: State) {
-  const last = s.trail[s.trail.length - 1];
-  if (!last) {
-    s.trail.push({ x: s.bx, y: s.by });
-    return;
-  }
-  const d = Math.hypot(s.bx - last.x, s.by - last.y);
-  const n = Math.min(Math.floor(d / TUNING.trailSpacing), TUNING.trailLength);
-  for (let i = 1; i <= n; i++) {
-    const k = (i * TUNING.trailSpacing) / d;
-    s.trail.push({ x: last.x + (s.bx - last.x) * k, y: last.y + (s.by - last.y) * k });
-  }
-  if (s.trail.length > TUNING.trailLength) s.trail.splice(0, s.trail.length - TUNING.trailLength);
-}
 
 function advanceGhost(s: State) {
   const g = s.ghost;
@@ -469,24 +414,6 @@ function advanceGhost(s: State) {
   if (!s.ghostDone && s.ghostIdx > s.cur) s.ghostAhead = true;
 }
 
-function tickEffects(s: State, dt: number) {
-  s.shake = Math.max(0, s.shake - dt * 40);
-  s.shakeX = s.shake ? (s.fx() - 0.5) * s.shake : 0;
-  s.shakeY = s.shake ? (s.fx() - 0.5) * s.shake : 0;
-  for (const q of s.particles) {
-    q.x += q.vx * dt;
-    q.y += q.vy * dt;
-    q.vx *= 0.94;
-    q.vy *= 0.94;
-    q.life -= dt;
-  }
-  retain(s.particles, (q) => q.life > 0);
-  for (const u of s.popups) {
-    u.y -= 50 * dt;
-    u.life -= dt;
-  }
-  retain(s.popups, (u) => u.life > 0);
-}
 
 export function step(s: State, realDt: number) {
   const dt = s.slowmo > 0 ? realDt * TUNING.slowmoScale : realDt;

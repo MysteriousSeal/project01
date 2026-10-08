@@ -1,29 +1,26 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useEffectEvent, useState } from 'react';
-import { Alert, BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { currentChallenges, isOpen, resetAttempts } from './src/game/meta/challenge';
 import { skinById, themeById, trailById } from './src/game/meta/cosmetics';
 import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
-import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
-import { Save } from './src/game/meta/save';
+import { applyRun, RunReport } from './src/game/meta/progress';
 import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
-import { progressSummary, recommendedSource, SaveSource, touch } from './src/game/meta/sync';
 import { reviveOffer } from './src/game/meta/revive';
 import type { GameEvent, RunResult } from './src/game/sim/engine';
-import { haptic, hapticForEvent } from './src/services/device/haptics';
-import { playSound, preloadSounds, soundForEvent } from './src/services/device/sound';
-import { loadSave, writeSave } from './src/services/device/storage';
-import { supabaseAccount } from './src/services/backend/accountApi';
-import { supabase } from './src/services/backend/client';
+import { gameFeedback } from './src/services/device/feedback';
+import { haptic } from './src/services/device/haptics';
+import { preloadSounds } from './src/services/device/sound';
 import { useCloudSync } from './src/services/hooks/useCloudSync';
 import { usePrefetchLeaderboards } from './src/services/hooks/useLeaderboards';
+import { useSaveState } from './src/services/hooks/useSaveState';
 import { AccountSection } from './src/ui/screens/AccountSection';
-import { telemetry, useTelemetry } from './src/services/hooks/useTelemetry';
-import { ChangeReason, diffLedger, openingEntry } from './src/game/meta/ledger';
+import { useTelemetry } from './src/services/hooks/useTelemetry';
+import { accountApi, telemetry } from './src/services/instances';
 import { runRow, uuid } from './src/game/meta/stats';
-import { awardTrophies, trophiesDue, trophiesEarned } from './src/game/meta/trophies';
 import { TabBar, TabId } from './src/ui/components/TabBar';
+import { chooseProgress } from './src/ui/dialogs/chooseProgress';
 import { DailyScreen } from './src/ui/screens/DailyScreen';
 import { GameOverScreen } from './src/ui/screens/GameOverScreen';
 import { GameScreen } from './src/ui/screens/game/GameScreen';
@@ -36,77 +33,22 @@ import { C } from './src/ui/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const accountApi = supabase ? supabaseAccount(supabase) : null;
-
-const describe = (s: Save) => {
-  const p = progressSummary(s);
-  return `Level ${p.level} · ${p.wallet} coins · best ${p.best} · ${p.games} games`;
-};
-
-const chooseProgress = (local: Save, remote: Save) =>
-  new Promise<SaveSource>((resolve) => {
-    const best = recommendedSource(local, remote);
-    Alert.alert(
-      'Choose your progress',
-      `This account already has progress.\n\nAccount: ${describe(remote)}\nThis phone: ${describe(local)}\n\nThe other one will be replaced.`,
-      [
-        { text: best === 'local' ? 'Keep this phone (recommended)' : 'Keep this phone', onPress: () => resolve('local') },
-        { text: best === 'remote' ? 'Use account progress (recommended)' : 'Use account progress', onPress: () => resolve('remote'), style: 'default' },
-      ],
-      { cancelable: false },
-    );
-  });
-
 /** `runId` is the server id shared by the run row and any revive paid during it. */
 type Run = { id: number; runId: string; config: RunConfig };
 type Outcome = { result: RunResult; report: RunReport };
 
 export default function App() {
   const { width, height } = useWindowDimensions();
-  const [save, setSave] = useState<Save | null>(null);
   const [tab, setTab] = useState<TabId>('home');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newTrophies, setNewTrophies] = useState(false);
+  const { save, update, replace } = useSaveState(() => tab !== 'trophies' && setNewTrophies(true));
   const [run, setRun] = useState<Run | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    loadSave().then((s) => alive && setSave(ensureMissions(s)));
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (save) writeSave(save);
-  }, [save]);
-
-  const switchAccount = useCloudSync(save, (remote) => setSave(ensureMissions(remote)));
+  const switchAccount = useCloudSync(save, replace);
   useTelemetry(save?.name ?? '');
   usePrefetchLeaderboards();
-
-  const needsOpening = save !== null && !save.ledgerStarted && telemetry !== null;
-  const startLedger = useEffectEvent(() => {
-    if (!save || save.ledgerStarted) return;
-    if (save.wallet > 0) void telemetry?.logLedger([openingEntry(save, uuid())]);
-    setSave(touch({ ...save, ledgerStarted: true }));
-  });
-  useEffect(() => {
-    if (needsOpening) startLedger();
-  }, [needsOpening]);
-
-  // Records reached before trophies existed, or outside a run, are rewarded as soon as the ledger is ready.
-  const ledgerReady = save !== null && (save.ledgerStarted || telemetry === null);
-  const due = ledgerReady && trophiesDue(save);
-  const catchUpTrophies = useEffectEvent(() => {
-    if (!save) return;
-    update(save, { source: 'trophy' });
-    haptic('success');
-  });
-  useEffect(() => {
-    if (due) catchUpTrophies();
-  }, [due]);
 
   const loaded = save !== null;
   useEffect(() => {
@@ -129,14 +71,6 @@ export default function App() {
     });
     return () => sub.remove();
   }, [inMenu, tab, settingsOpen]);
-
-  function update(next: Save, reason: ChangeReason = { source: 'other' }) {
-    if (!save) return;
-    const settled = awardTrophies(next).save;
-    void telemetry?.logLedger(diffLedger(save, settled, reason, uuid));
-    if (trophiesEarned(settled) > trophiesEarned(save) && tab !== 'trophies') setNewTrophies(true);
-    setSave(touch(settled));
-  }
 
   if (!save) return <View style={styles.root} />;
 
@@ -172,18 +106,15 @@ export default function App() {
     if (report.completed.length || report.levelAfter > report.levelBefore) haptic('success');
   };
 
-  const onGameEvent = (e: GameEvent, combo: number) => {
-    hapticForEvent(e);
-    const sound = save.settings.sound && soundForEvent(e, combo);
-    if (sound) playSound(sound);
-  };
+  const onGameEvent = (e: GameEvent, combo: number) => gameFeedback(e, combo, save.settings.sound);
 
   const offerRevive = (used: number) => (run ? reviveOffer(run.config.mode, used, save.wallet) : null);
 
   const payRevive = (used: number) => {
     const price = offerRevive(used);
-    if (!run || price === null) return;
+    if (!run || price === null) return false;
     update({ ...save, wallet: save.wallet - price }, { source: 'revive', runId: run.runId, count: used + 1 });
+    return true;
   };
 
   const claim = () => {

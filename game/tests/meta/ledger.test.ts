@@ -5,7 +5,7 @@ import { BOOSTS, buyBoost } from '../../src/game/meta/boosts';
 import { CATALOG_BEGIN, CATALOG_END, catalogSeedSql } from '../../src/game/meta/catalogSql';
 import { CATALOG, COSMETIC_KINDS } from '../../src/game/meta/cosmetics';
 import { claimDaily } from '../../src/game/meta/dailyReward';
-import { diffLedger, LedgerEntry, openingEntry } from '../../src/game/meta/ledger';
+import { diffLedger, LedgerEntry, openingEntry, settleArrival } from '../../src/game/meta/ledger';
 import { BUNDLES, buyBundle, buyDeal, DEAL_DISCOUNT, discounted, MYSTERY_PRICE, openMysteryBox } from '../../src/game/meta/offers';
 import { normalizeSave, Save } from '../../src/game/meta/save';
 import { buyCosmetic, buyUpgrade, equipCosmetic, OfferItem, priceOf } from '../../src/game/meta/shop';
@@ -135,5 +135,35 @@ describe('server catalog', () => {
     if (block !== catalogSeedSql()) {
       throw new Error(`The server catalog is out of date. Add a new migration containing:\n\n${catalogSeedSql()}\n`);
     }
+  });
+});
+
+describe('saves arriving from the device or the cloud', () => {
+  let k = 0;
+  const next = () => `a-${++k}`;
+
+  it('start the ledger once with the existing wallet', () => {
+    const first = settleArrival(saveWith({ wallet: 300 }), true, next);
+    expect(first.save.ledgerStarted).toBe(true);
+    expect(first.entries).toEqual([expect.objectContaining({ source: 'opening', amount: 300, wallet_after: 300 })]);
+    const again = settleArrival(first.save, true, next);
+    expect(again.entries).toEqual([]);
+    expect(again.changed).toBe(false);
+    expect(again.save).toBe(first.save);
+  });
+
+  it('reward trophies already reached, after the opening balance', () => {
+    const s = settleArrival(saveWith({ wallet: 246, bestPlanet: 20, games: 10 }), true, next);
+    expect(s.trophies).toBe(2);
+    expect(s.entries.map((e) => e.source)).toEqual(['opening', 'trophy']);
+    expect(s.entries[1]).toMatchObject({ amount: 50, wallet_after: 296 });
+    expect(s.save.wallet).toBe(296);
+  });
+
+  it('keep no ledger without a backend, but still reward trophies', () => {
+    const s = settleArrival(saveWith({ wallet: 10, games: 10 }), false, next);
+    expect(s.entries).toEqual([]);
+    expect(s.save.ledgerStarted).toBe(false);
+    expect(s.save.wallet).toBe(35);
   });
 });

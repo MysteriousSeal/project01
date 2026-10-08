@@ -1,11 +1,8 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { AppState } from 'react-native';
 import type { Save } from '../../game/meta/save';
-import { supabaseCloud } from '../backend/savesApi';
 import { ChooseSave, CloudSync } from '../sync/cloudSync';
-import { supabase } from '../backend/client';
-
-export const cloudEnabled = supabase !== null;
+import { savesApi } from '../instances';
 
 export function useCloudSync(save: Save | null, onAdopt: (save: Save) => void) {
   const sync = useRef<CloudSync | null>(null);
@@ -14,8 +11,8 @@ export function useCloudSync(save: Save | null, onAdopt: (save: Save) => void) {
   const loaded = save !== null;
 
   useEffect(() => {
-    if (!supabase || !loaded) return;
-    const s = new CloudSync(supabaseCloud(supabase), (remote) => adopt(remote));
+    if (!savesApi || !loaded) return;
+    const s = new CloudSync(savesApi, (remote) => adopt(remote));
     sync.current = s;
     const local = current();
     if (local) void s.start(local);
@@ -34,9 +31,9 @@ export function useCloudSync(save: Save | null, onAdopt: (save: Save) => void) {
   }, [save]);
 
   return async (choose: ChooseSave) => {
-    if (!supabase || !save) return;
+    if (!savesApi || !save) return;
     sync.current?.stop();
-    const s = new CloudSync(supabaseCloud(supabase), onAdopt);
+    const s = new CloudSync(savesApi, onAdopt);
     sync.current = s;
     await s.start(save, choose);
   };

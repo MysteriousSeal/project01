@@ -1,24 +1,18 @@
 import { useEffect } from 'react';
-import { AppState, Platform } from 'react-native';
-import { Outbox } from '../sync/outbox';
-import { supabaseStats } from '../backend/statsApi';
-import { keyValue } from '../device/storage';
-import { supabase } from '../backend/client';
-import { Telemetry } from '../sync/telemetry';
-
-export const statsApi = supabase ? supabaseStats(supabase) : null;
-export const telemetry = statsApi ? new Telemetry(statsApi, new Outbox(keyValue('orbit-hop-outbox-v1')), Platform.OS) : null;
+import { AppState } from 'react-native';
+import { telemetry } from '../instances';
 
 export function useTelemetry(name: string) {
   useEffect(() => {
-    if (!telemetry) return;
-    telemetry.startSession();
-    void telemetry.flush();
+    const t = telemetry;
+    if (!t) return;
+    t.startSession();
+    void t.flush();
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        telemetry.startSession();
-        void telemetry.flush();
-      } else void telemetry.endSession();
+        t.startSession();
+        void t.flush();
+      } else void t.endSession();
     });
     return () => sub.remove();
   }, []);

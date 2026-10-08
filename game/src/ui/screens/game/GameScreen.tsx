@@ -26,7 +26,8 @@ type Props = {
   onEnd: (r: RunResult) => void;
   /** Coins for the next revive of this run, or null when none is offered. */
   reviveOffer?: (used: number) => number | null;
-  onRevive?: (used: number) => void;
+  /** Pays for a revive; returns false when it could not be paid. */
+  onRevive?: (used: number) => boolean;
   wallet?: number;
 };
 
@@ -84,7 +85,7 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
   });
   const { offer, resume, decline } = useGameLoop(g, onEvent, onEnd, reviveOffer);
   const accept = () => {
-    onRevive?.(g.revives);
+    if (!onRevive?.(g.revives)) return decline();
     revive(g);
     resume();
   };

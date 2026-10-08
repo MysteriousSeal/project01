@@ -34,10 +34,12 @@ function targetFor(kind: MissionKind, lvl: number) {
   }
 }
 
+export const missionReward = (lvl: number) => 10 + lvl * 4;
+
 export function makeMission(lvl: number, avoid: MissionKind[], rng: Rng = Math.random): Mission {
   const pool = MISSION_KINDS.filter((k) => !avoid.includes(k));
   const kind = pool[Math.floor(rng() * pool.length)] ?? 'score';
-  return { id: `${kind}-${Date.now().toString(36)}-${Math.floor(rng() * 1e9).toString(36)}`, kind, target: targetFor(kind, lvl), progress: 0, reward: 10 + lvl * 4 };
+  return { id: `${kind}-${Date.now().toString(36)}-${Math.floor(rng() * 1e9).toString(36)}`, kind, target: targetFor(kind, lvl), progress: 0, reward: missionReward(lvl) };
 }
 
 export function fillMissions(missions: Mission[], lvl: number, rng: Rng = Math.random): Mission[] {

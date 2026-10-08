@@ -32,8 +32,9 @@ export function playSound(name: SoundName) {
     const pool = load().get(name)!;
     const player = pool.players[pool.next];
     pool.next = (pool.next + 1) % pool.players.length;
-    player.seekTo(0).catch(() => {});
-    player.play();
+    // Rewind first (as the expo-audio docs do) so a sound that just played restarts from the top.
+    const start = () => player.play();
+    player.seekTo(0).then(start, start);
   } catch {
     // Sound is a nice-to-have; never let it break the game.
   }

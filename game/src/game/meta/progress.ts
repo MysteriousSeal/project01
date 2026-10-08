@@ -9,6 +9,12 @@ import { addRunStats, awardTrophies, TrophyUnlock } from './trophies';
 
 export const xpForLevel = (lvl: number) => 80 + lvl * 40;
 
+/**
+ * Coins a run may pay beyond what was collected in it (missions, level-ups, medals). The server
+ * flags larger run entries; mission rewards grow with level, so this leaves room for veterans.
+ */
+export const RUN_BONUS_MAX = 10_000;
+
 export function levelInfo(xp: number) {
   let lvl = 1;
   let rest = xp;
