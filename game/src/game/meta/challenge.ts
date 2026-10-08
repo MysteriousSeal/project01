@@ -2,6 +2,7 @@ import { ChallengeType, challengeTypeById, challengeTypesFor } from './challenge
 import { dayKey, yesterdayKey } from './calendar';
 import type { RunResult } from '../sim/engine';
 import { Track, trackBest } from '../sim/ghost';
+import { hashSeed } from '../sim/rng';
 import { C } from '../palette';
 
 export const CHALLENGE_ATTEMPTS = 3;
@@ -30,15 +31,7 @@ export const typeOf = (slot: ChallengeSlot) => challengeTypeById(slot.type);
 export const attemptsLeft = (slot: ChallengeSlot) => Math.max(0, CHALLENGE_ATTEMPTS - slot.attempts);
 export const isOpen = (slot: ChallengeSlot) => attemptsLeft(slot) > 0 && slot.medal < MEDAL_TIERS.length;
 
-export function challengeSeed(day: string, type: string) {
-  const key = `${day}:${type}`;
-  let h = 0x811c9dc5;
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
+export const challengeSeed = (day: string, type: string) => hashSeed(`${day}:${type}`);
 
 export function currentChallenges(c: DailyChallenges, now: Date = new Date()): DailyChallenges {
   const today = dayKey(now);

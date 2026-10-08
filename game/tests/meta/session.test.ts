@@ -15,7 +15,7 @@ describe('startRun', () => {
     const save = saveWith({ upgrades: { sturdy: 2 }, bestPlanet: 12, games: 1, ghost: [[1, 1]], settings: { ghost: true } });
     const started = startRun(save, 'normal', '', today)!;
     expect(started.save).toBe(save);
-    expect(started.config).toEqual({ mode: 'normal', mods: modsFrom({ sturdy: 2 }), rules: DEFAULT_RULES, ghost: [[1, 1]], bestIdx: 12, showHint: true });
+    expect(started.config).toEqual({ mode: 'normal', mods: modsFrom({ sturdy: 2 }), rules: DEFAULT_RULES, ghost: [[1, 1]], bestIdx: 12, headStart: 0, showHint: true });
   });
 
   it('hides the ghost and hint when they do not apply', () => {

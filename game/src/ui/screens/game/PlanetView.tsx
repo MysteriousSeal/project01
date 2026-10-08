@@ -6,11 +6,11 @@ import { alpha, C, F } from '../../theme';
 const RING_DOTS = 30;
 const BOSS_COLOR = hsl(285, 55, 45);
 
-export function PlanetView({ p, active, top, t }: { p: Planet; active: boolean; top: number; t: number }) {
+export function PlanetView({ p, active, top, t, color: base }: { p: Planet; active: boolean; top: number; t: number; color: string }) {
   const k = active ? Math.max(0.15, p.fuse / p.fuseMax) : 1;
   const r = p.r * (0.55 + 0.45 * k);
   const danger = active && k < 0.35;
-  const color = danger ? C.danger : p.gold ? C.gold : p.boss ? BOSS_COLOR : hsl(p.hue, 70, 60);
+  const color = danger ? C.danger : p.gold ? C.gold : p.boss ? BOSS_COLOR : base;
   const ring = p.gold ? alpha(C.gold, 0.67) : alpha(C.text, active ? 0.33 : 0.13);
   return (
     <>

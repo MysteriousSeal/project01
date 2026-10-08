@@ -16,7 +16,6 @@ export const C = {
   surface: '#ffffff10',
   goldWash: '#ffd34d14',
   goldEdge: '#ffd34d88',
-  overlay: '#0b1026ee',
   bronze: '#d08a4f',
   silver: '#c9d3e6',
 } as const;

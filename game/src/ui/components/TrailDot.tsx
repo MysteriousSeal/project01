@@ -28,6 +28,14 @@ export function TrailDot({ style, k, i, x, y, color, t, scale = 1 }: Props) {
       const s = (6 + k * 16) * scale;
       return box(s, { borderRadius: s, borderWidth: 2, borderColor: color, opacity: k * 0.7 });
     }
+    case 'bubbles': {
+      const s = (4 + (1 - k) * 14) * scale;
+      return box(s, { borderRadius: s, borderWidth: 1.5, borderColor: color, opacity: 0.25 + k * 0.6 });
+    }
+    case 'flame': {
+      const s = (4 + k * 13) * scale;
+      return box(s, { borderRadius: s, backgroundColor: `hsl(${10 + k * 40},100%,${45 + k * 20}%)`, opacity: 0.2 + k * 0.7 });
+    }
     case 'sparkle': {
       const tw = 0.5 + 0.5 * Math.sin(t * 18 + i * 1.7);
       const s = (2 + ((i * 7) % 4) + k * 3) * scale;

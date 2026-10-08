@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Skin, TrailStyle } from '../../../game/meta/cosmetics';
+import { Skin, Theme, TrailStyle } from '../../../game/meta/cosmetics';
 import { RunConfig } from '../../../game/meta/session';
 import { hsl } from '../../../game/palette';
 import { createState, GameEvent, ghostActive, isSettled, launchDir, POWER_COLOR, RunResult, runResult, State, step, tap, TUNING, zoneOf } from '../../../game/sim/engine';
@@ -18,6 +18,7 @@ type Props = {
   H: number;
   skin: Skin;
   trailStyle: TrailStyle;
+  theme: Theme;
   config: RunConfig;
   onEvent?: (e: GameEvent) => void;
   onEnd: (r: RunResult) => void;
@@ -57,9 +58,9 @@ function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'])
   }, [s]);
 }
 
-export function GameScreen({ W, H, skin, trailStyle, config, onEvent, onEnd }: Props) {
+export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onEnd }: Props) {
   const [g] = useState(() =>
-    createState(W, H, { bestIdx: config.bestIdx, mods: config.mods, rules: config.rules, ghost: config.ghost, rng: config.seed === undefined ? Math.random : seededRng(config.seed) }),
+    createState(W, H, { bestIdx: config.bestIdx, mods: config.mods, rules: config.rules, ghost: config.ghost, headStart: config.headStart, rng: config.seed === undefined ? Math.random : seededRng(config.seed) }),
   );
   useGameLoop(g, onEvent, onEnd);
 
@@ -89,7 +90,7 @@ export function GameScreen({ W, H, skin, trailStyle, config, onEvent, onEnd }: P
           </View>
         )}
 
-        {g.planets.map((p) => <PlanetView key={p.idx} p={p} active={p.idx === g.cur} top={p.y - cy} t={g.t} />)}
+        {g.planets.map((p) => <PlanetView key={p.idx} p={p} active={p.idx === g.cur} top={p.y - cy} t={g.t} color={theme.planet(p.idx)} />)}
 
         {ghostPlanet && (
           <View style={[styles.ghost, { left: ghostPlanet.x + Math.cos(g.t * 2.4) * ghostPlanet.orbit - 11, top: ghostPlanet.y + Math.sin(g.t * 2.4) * ghostPlanet.orbit - cy - 11 }]}>

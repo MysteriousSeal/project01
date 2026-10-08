@@ -88,9 +88,9 @@ export type State = {
 
 export const POWER_COLOR: Record<PowerKind, string> = { shield: C.cyan, magnet: C.pink };
 
-export type CreateOptions = { bestIdx?: number; mods?: Mods; rules?: Rules; rng?: Rng; fx?: Rng; ghost?: Track };
+export type CreateOptions = { bestIdx?: number; mods?: Mods; rules?: Rules; rng?: Rng; fx?: Rng; ghost?: Track; headStart?: number };
 
-export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_MODS, rules = DEFAULT_RULES, rng = Math.random, fx = Math.random, ghost = [] }: CreateOptions = {}): State {
+export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_MODS, rules = DEFAULT_RULES, rng = Math.random, fx = Math.random, ghost = [], headStart = 0 }: CreateOptions = {}): State {
   const first = makePlanet(rng, 0, null, W, 0, rules);
   const s: State = {
     W, H, rng, fx, mods, rules,
@@ -103,8 +103,19 @@ export function createState(W: number, H: number, { bestIdx = 0, mods = DEFAULT_
     dead: false, deathReason: null, t: 0, shake: 0, shakeX: 0, shakeY: 0,
   };
   ensurePlanets(s);
-  orbit(s, planetOf(s, 0));
+  if (headStart > 0) jumpTo(s, headStart);
+  orbit(s, currentPlanet(s));
   return s;
+}
+
+function jumpTo(s: State, idx: number) {
+  s.cur = idx;
+  ensurePlanets(s);
+  s.camY = currentPlanet(s).y - s.H * TUNING.cameraAnchor;
+  s.score = idx;
+  s.zone = zoneIndex(idx);
+  s.landings.push([0, idx]);
+  ensurePlanets(s);
 }
 
 export const planetOf = (s: State, idx: number) => s.planets.find((p) => p.idx === idx)!;
@@ -140,6 +151,12 @@ function ensurePlanets(s: State) {
   retain(s.planets, (p) => p.y < cutoff || p.idx === s.cur);
   retain(s.coins, (c) => c.y < cutoff && !c.taken);
   retain(s.powerups, (u) => u.y < cutoff && !u.taken);
+}
+
+function addCoins(s: State, n: number) {
+  const gained = n * s.mods.coinMultiplier;
+  s.coinsRun += gained;
+  return gained;
 }
 
 function burst(s: State, x: number, y: number, color: string, n: number, speed = 220) {
@@ -203,11 +220,11 @@ export function tap(s: State) {
 function clearBoss(s: State, p: Planet) {
   p.ring = false;
   s.score += TUNING.bossBonus;
-  s.coinsRun += TUNING.bossCoins;
+  const bossCoins = addCoins(s, TUNING.bossCoins);
   s.slowmo = TUNING.slowmoTime;
   s.shake = 14;
   banner(s, 0.32, 'BOSS CLEARED!', C.gold, 1.6);
-  popup(s, p.x, p.y + p.orbit + 24, `+${TUNING.bossBonus} pts  +${TUNING.bossCoins}`, C.gold, 1.4, true);
+  popup(s, p.x, p.y + p.orbit + 24, `+${TUNING.bossBonus} pts  +${bossCoins}`, C.gold, 1.4, true);
   burst(s, p.x, p.y, C.gold, 40, 380);
   burst(s, p.x, p.y, C.pink, 24, 300);
   s.events.push('boss');
@@ -230,8 +247,7 @@ function land(s: State, p: Planet) {
 
   if (p.gold) {
     p.gold = false;
-    s.coinsRun += TUNING.goldCoins;
-    popup(s, p.x, p.y + p.orbit + 20, `+${TUNING.goldCoins}`, C.gold, 1, true);
+    popup(s, p.x, p.y + p.orbit + 20, `+${addCoins(s, TUNING.goldCoins)}`, C.gold, 1, true);
     burst(s, p.x, p.y, C.gold, 20, 260);
     s.events.push('coin');
   }
@@ -330,8 +346,7 @@ function collectPickups(s: State, dt: number) {
     }
     if (d < TUNING.coinRadius) {
       c.taken = true;
-      const value = s.fever > 0 ? 2 : 1;
-      s.coinsRun += value;
+      const value = addCoins(s, s.fever > 0 ? 2 : 1);
       if (value > 1) popup(s, c.x, c.y - 20, `+${value}`, C.gold, 0.6, true);
       burst(s, c.x, c.y, C.gold, 8, 160);
       s.events.push('coin');

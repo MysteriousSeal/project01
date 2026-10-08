@@ -58,7 +58,7 @@ describe('upgrades', () => {
   });
 
   it('turns levels into run modifiers, clamping out-of-range levels', () => {
-    expect(modsFrom({})).toEqual({ fuseBonus: 0, magnetTime: 8, feverTime: 6, powerChance: 0.1, startShield: false });
+    expect(modsFrom({})).toEqual({ fuseBonus: 0, magnetTime: 8, feverTime: 6, powerChance: 0.1, startShield: false, coinMultiplier: 1 });
     const max = modsFrom({ sturdy: 99, magnet: 3, fever: 3, lucky: 3, shield: 1 });
     expect(max.fuseBonus).toBeCloseTo(1.2);
     expect(max.magnetTime).toBe(14);

@@ -27,5 +27,6 @@ export function modsFrom(levels: Partial<Record<string, number>>): Mods {
     feverTime: DEFAULT_MODS.feverTime + l('fever') * FEVER_STEP,
     powerChance: DEFAULT_MODS.powerChance + l('lucky') * LUCKY_STEP,
     startShield: DEFAULT_MODS.startShield || l('shield') > 0,
+    coinMultiplier: DEFAULT_MODS.coinMultiplier,
   };
 }

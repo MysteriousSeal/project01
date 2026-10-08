@@ -65,7 +65,7 @@ function Stat({ label, value, color, compact }: { label: string; value: string; 
 }
 
 const styles = StyleSheet.create({
-  root: { ...FILL, backgroundColor: C.overlay, alignItems: 'center' },
+  root: { ...FILL, backgroundColor: C.space, alignItems: 'center' },
   mid: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: GUTTER },
   badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, minHeight: 28, alignItems: 'center' },
   badge: { color: C.space, fontWeight: '900', fontSize: 14, letterSpacing: 1, paddingHorizontal: 12, paddingVertical: 5, borderRadius: RADIUS.md, overflow: 'hidden' },

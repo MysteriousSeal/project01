@@ -36,9 +36,9 @@ export const DEFAULT_RULES: Rules = {
   goldChance: 0.12,
 };
 
-export type Mods = { fuseBonus: number; magnetTime: number; feverTime: number; powerChance: number; startShield: boolean };
+export type Mods = { fuseBonus: number; magnetTime: number; feverTime: number; powerChance: number; startShield: boolean; coinMultiplier: number };
 
-export const DEFAULT_MODS: Mods = { fuseBonus: 0, magnetTime: 8, feverTime: 6, powerChance: 0.1, startShield: false };
+export const DEFAULT_MODS: Mods = { fuseBonus: 0, magnetTime: 8, feverTime: 6, powerChance: 0.1, startShield: false, coinMultiplier: 1 };
 
 export const ZONES = [
   { name: 'DEEP SPACE', bg: '#0b1026' },

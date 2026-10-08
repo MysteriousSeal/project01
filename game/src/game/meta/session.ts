@@ -3,6 +3,7 @@ import { Track } from '../sim/ghost';
 import { attemptsLeft, challengeSeed, currentChallenges, slotOf, startChallenge, typeOf } from './challenge';
 import { ChallengeType } from './challengeTypes';
 import type { Save } from './save';
+import { consumeBoosts } from './boosts';
 import { modsFrom } from './upgrades';
 
 export type RunMode = 'normal' | 'daily';
@@ -15,6 +16,7 @@ export type RunConfig = {
   rules: Rules;
   ghost: Track;
   bestIdx: number;
+  headStart: number;
   showHint: boolean;
 };
 
@@ -24,9 +26,18 @@ const showHint = (save: Save) => save.games < TUTORIAL_GAMES;
 
 export function startRun(save: Save, mode: RunMode, type = '', now: Date = new Date()): { save: Save; config: RunConfig } | null {
   if (mode === 'normal') {
+    const boosted = consumeBoosts(save, modsFrom(save.upgrades));
     return {
-      save,
-      config: { mode, mods: modsFrom(save.upgrades), rules: DEFAULT_RULES, ghost: save.settings.ghost ? save.ghost : [], bestIdx: save.bestPlanet, showHint: showHint(save) },
+      save: boosted.save,
+      config: {
+        mode,
+        mods: boosted.effect.mods,
+        rules: DEFAULT_RULES,
+        ghost: save.settings.ghost ? save.ghost : [],
+        bestIdx: save.bestPlanet,
+        headStart: boosted.effect.headStart,
+        showHint: showHint(save),
+      },
     };
   }
   const challenges = startChallenge(save.challenges, type, now);
@@ -43,6 +54,7 @@ export function startRun(save: Save, mode: RunMode, type = '', now: Date = new D
       rules: challenge.rules,
       ghost: save.settings.ghost ? slot.ghost : [],
       bestIdx: 0,
+      headStart: 0,
       showHint: showHint(save),
     },
   };

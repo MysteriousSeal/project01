@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { currentChallenges, isOpen } from './src/game/meta/challenge';
-import { skinById, trailById } from './src/game/meta/cosmetics';
+import { skinById, themeById, trailById } from './src/game/meta/cosmetics';
 import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
 import { applyRun, ensureMissions, RunReport } from './src/game/meta/progress';
 import { Save } from './src/game/meta/save';
@@ -102,9 +102,10 @@ export default function App() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      {run ? (
-        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} config={run.config} onEvent={hapticForEvent} onEnd={finishRun} />
-      ) : (
+      {run && !outcome && (
+        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} theme={themeById(save.theme)} config={run.config} onEvent={hapticForEvent} onEnd={finishRun} />
+      )}
+      {!run && (
         <>
           <View style={styles.page}>
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}

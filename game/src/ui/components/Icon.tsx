@@ -18,7 +18,12 @@ export type IconName =
   | 'shield-halved'
   | 'magnet'
   | 'ghost'
-  | 'calendar-day';
+  | 'calendar-day'
+  | 'rocket'
+  | 'gift'
+  | 'tag'
+  | 'box-open'
+  | 'layer-group';
 
 type Props = { name: IconName; size?: number; color?: string; style?: StyleProp<TextStyle> };
 

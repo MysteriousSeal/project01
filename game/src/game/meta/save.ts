@@ -1,6 +1,7 @@
 import { CHALLENGE_ATTEMPTS, ChallengeSlot, DailyChallenges, emptyChallenges, MEDAL_TIERS } from './challenge';
 import { CHALLENGE_TYPES, CHALLENGES_PER_DAY } from './challengeTypes';
-import { CATALOG, DEFAULT_COSMETIC } from './cosmetics';
+import { BOOSTS, MAX_BOOST_STACK } from './boosts';
+import { CATALOG, COSMETIC_KINDS, DEFAULT_COSMETIC } from './cosmetics';
 import { parseTrack, Track } from '../sim/ghost';
 import { Mission, MISSION_KINDS, MISSION_SLOTS } from './missions';
 import { maxLevel, UPGRADES } from './upgrades';
@@ -15,6 +16,10 @@ export type Save = {
   skins: string[];
   trail: string;
   trails: string[];
+  theme: string;
+  themes: string[];
+  boosts: Record<string, number>;
+  dealDay: string;
   upgrades: Record<string, number>;
   missions: Mission[];
   lastDaily: string;
@@ -38,6 +43,10 @@ export const defaultSave = (): Save => ({
   skins: [DEFAULT_COSMETIC],
   trail: DEFAULT_COSMETIC,
   trails: [DEFAULT_COSMETIC],
+  theme: DEFAULT_COSMETIC,
+  themes: [DEFAULT_COSMETIC],
+  boosts: {},
+  dealDay: '',
   upgrades: {},
   missions: [],
   lastDaily: '',
@@ -96,10 +105,21 @@ export function normalizeSave(input: unknown): Save {
   if (!input || typeof input !== 'object') return base;
   const r = input as Raw;
 
-  const skins = collection(r.skins ?? r.owned, new Set(CATALOG.skin.items.map((i) => i.id)));
-  const trails = collection(r.trails, new Set(CATALOG.trail.items.map((i) => i.id)));
-  const skin = skins.includes(text(r.skin)) ? text(r.skin) : DEFAULT_COSMETIC;
-  const trail = trails.includes(text(r.trail)) ? text(r.trail) : DEFAULT_COSMETIC;
+  const legacy: Raw = { ...r, skins: r.skins ?? r.owned };
+  const cosmetics = {} as Pick<Save, 'skin' | 'skins' | 'trail' | 'trails' | 'theme' | 'themes'>;
+  for (const kind of COSMETIC_KINDS) {
+    const { owned, equipped, items } = CATALOG[kind];
+    const list = collection(legacy[owned], new Set(items.map((i) => i.id)));
+    cosmetics[owned] = list;
+    cosmetics[equipped] = list.includes(text(r[equipped])) ? text(r[equipped]) : DEFAULT_COSMETIC;
+  }
+
+  const rawBoosts = r.boosts && typeof r.boosts === 'object' ? (r.boosts as Raw) : {};
+  const boosts: Record<string, number> = {};
+  for (const b of BOOSTS) {
+    const n = Math.min(count(rawBoosts[b.id]), MAX_BOOST_STACK);
+    if (n) boosts[b.id] = n;
+  }
 
   const rawUp = r.upgrades && typeof r.upgrades === 'object' ? (r.upgrades as Raw) : {};
   const upgrades: Record<string, number> = {};
@@ -116,10 +136,9 @@ export function normalizeSave(input: unknown): Save {
     wallet: count(r.wallet),
     xp: count(r.xp),
     games: count(r.games),
-    skin,
-    skins,
-    trail,
-    trails,
+    ...cosmetics,
+    boosts,
+    dealDay: text(r.dealDay),
     upgrades,
     missions: missions.slice(0, MISSION_SLOTS),
     lastDaily: text(r.lastDaily),

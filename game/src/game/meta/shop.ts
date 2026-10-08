@@ -4,15 +4,27 @@ import { maxLevel, upgradeById } from './upgrades';
 
 export type ShopResult = Save | null;
 
-const priceOf = (kind: CosmeticKind, id: string) => CATALOG[kind].items.find((i) => i.id === id)?.price;
+export const priceOf = (kind: CosmeticKind, id: string) => CATALOG[kind].items.find((i) => i.id === id)?.price;
 
 export const owns = (save: Save, kind: CosmeticKind, id: string) => save[CATALOG[kind].owned].includes(id);
 
+export type OfferItem = { kind: CosmeticKind; id: string };
+
+export function grant(save: Save, items: OfferItem[], price: number, equip = true): ShopResult {
+  if (save.wallet < price || items.some((it) => priceOf(it.kind, it.id) === undefined)) return null;
+  const next: Save = { ...save, wallet: save.wallet - price };
+  for (const { kind, id } of items) {
+    const { owned, equipped } = CATALOG[kind];
+    if (!next[owned].includes(id)) next[owned] = [...next[owned], id];
+    if (equip) next[equipped] = id;
+  }
+  return next;
+}
+
 export function buyCosmetic(save: Save, kind: CosmeticKind, id: string): ShopResult {
   const price = priceOf(kind, id);
-  if (price === undefined || owns(save, kind, id) || save.wallet < price) return null;
-  const { owned, equipped } = CATALOG[kind];
-  return { ...save, wallet: save.wallet - price, [owned]: [...save[owned], id], [equipped]: id };
+  if (price === undefined || owns(save, kind, id)) return null;
+  return grant(save, [{ kind, id }], price);
 }
 
 export function equipCosmetic(save: Save, kind: CosmeticKind, id: string): ShopResult {
