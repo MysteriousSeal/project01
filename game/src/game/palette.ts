@@ -18,6 +18,8 @@ export const C = {
   goldEdge: '#ffd34d88',
   bronze: '#d08a4f',
   silver: '#c9d3e6',
+  platinum: '#8ff0e6',
+  diamond: '#c4a1ff',
 } as const;
 
 export const alpha = (hex: string, a: number) => `${hex.slice(0, 7)}${Math.round(Math.max(0, Math.min(1, a)) * 255).toString(16).padStart(2, '0')}`;

@@ -35,5 +35,5 @@ const styles = StyleSheet.create({
   summary: { ...CARD, flexDirection: 'row', paddingVertical: 12 },
   tier: { flex: 1, alignItems: 'center' },
   count: { fontFamily: F.mono, fontSize: 24, fontWeight: '900' },
-  tierName: { color: C.dim, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginTop: 2 },
+  tierName: { color: C.dim, fontSize: 9, fontWeight: '900', letterSpacing: 0.8, marginTop: 2 },
 });

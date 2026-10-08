@@ -88,3 +88,13 @@ select tests.check(
 );
 select tests.check((select note = 'trophy tier already rewarded' from public.ledger where id = '40000000-0000-4000-8000-000000000002'), 'repeat tiers explain why');
 select tests.check((select value = 200 from public.catalog_settings where key = 'trophy_tier_3'), 'trophy rewards are in the catalog');
+
+-- Platinum and Diamond tiers are paid from the catalog too.
+set role authenticated;
+select tests.login(:dave);
+insert into public.ledger (id, user_id, kind, source, amount, wallet_after, detail) values
+  ('50000000-0000-4000-8000-000000000001', :dave, 'earn', 'trophy', 1150, 1150, '{"trophies": [{"id": "regular", "tier": 4}, {"id": "regular", "tier": 5}]}'),
+  ('50000000-0000-4000-8000-000000000002', :dave, 'earn', 'trophy', 900, 900, '{"trophies": [{"id": "hopper", "tier": 6}]}');
+reset role;
+select tests.check((select not suspicious from public.ledger where id = '50000000-0000-4000-8000-000000000001'), 'platinum and diamond rewards pass');
+select tests.check((select suspicious from public.ledger where id = '50000000-0000-4000-8000-000000000002'), 'tiers beyond diamond are flagged');

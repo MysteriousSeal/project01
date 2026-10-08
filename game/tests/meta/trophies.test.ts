@@ -15,19 +15,31 @@ describe('lifetime stats', () => {
     expect(b).toEqual({ planets: 15, perfects: 5, coins: 10, bosses: 1, comets: 2, fevers: 1, bestCombo: 6 });
   });
 
+  it('keep earned gold tiers and unlock the new ones on top', () => {
+    const veteran = saveWith({ games: 2600, trophies: { regular: 3 } });
+    const { unlocked, coins } = awardTrophies(veteran);
+    expect(unlocked.map((u) => [u.trophy.id, u.tier])).toEqual([['regular', 4]]);
+    expect(coins).toBe(TROPHY_TIERS[3].reward);
+  });
+
   it('survive saves and reject junk', () => {
     const s = normalizeSave({ stats: { planets: 12, comets: -3, bosses: 'x', bestCombo: 4.7 }, trophies: { hopper: 2, highFlyer: 9, fake: 3 } });
     expect(s.stats).toEqual({ ...emptyStats(), planets: 12, bestCombo: 4 });
-    expect(s.trophies).toEqual({ hopper: 2, highFlyer: 3 });
+    expect(s.trophies).toEqual({ hopper: 2, highFlyer: 5 });
     expect(normalizeSave({}).stats).toEqual(emptyStats());
   });
 });
 
 describe('trophies', () => {
-  it('have three increasing targets and unique ids', () => {
+  it('have one increasing target per tier and unique ids', () => {
     expect(new Set(TROPHIES.map((t) => t.id)).size).toBe(TROPHIES.length);
-    for (const t of TROPHIES) expect(t.targets[0] < t.targets[1] && t.targets[1] < t.targets[2]).toBe(true);
-    expect(TROPHY_COUNT).toBe(TROPHIES.length * 3);
+    expect(TROPHY_TIERS.map((t) => t.name)).toEqual(['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']);
+    for (const t of TROPHIES) {
+      expect(t.targets).toHaveLength(TROPHY_TIERS.length);
+      for (let i = 1; i < t.targets.length; i++) expect(t.targets[i]).toBeGreaterThan(t.targets[i - 1]);
+    }
+    for (let i = 1; i < TROPHY_TIERS.length; i++) expect(TROPHY_TIERS[i].reward).toBeGreaterThan(TROPHY_TIERS[i - 1].reward);
+    expect(TROPHY_COUNT).toBe(TROPHIES.length * 5);
   });
 
   it('grant every newly reached tier once, with coins', () => {
@@ -48,8 +60,10 @@ describe('trophies', () => {
   it('report progress toward the next tier', () => {
     const s = saveWith({ stats: { ...emptyStats(), comets: 4 }, trophies: { cometCatcher: 1 } });
     expect(trophyProgress(byId('cometCatcher'), s)).toEqual({ tier: 1, target: 10, value: 4, done: false });
-    const done = saveWith({ games: 5000, trophies: { regular: 3 } });
-    expect(trophyProgress(byId('regular'), done)).toMatchObject({ tier: 3, target: 1000, done: true });
+    const gold = saveWith({ games: 1500, trophies: { regular: 3 } });
+    expect(trophyProgress(byId('regular'), gold)).toEqual({ tier: 3, target: 2500, value: 1500, done: false });
+    const done = saveWith({ games: 9000, trophies: { regular: 5 } });
+    expect(trophyProgress(byId('regular'), done)).toMatchObject({ tier: 5, target: 5000, value: 5000, done: true });
   });
 
   it('unlock at the end of a run and pay through the run ledger entry', () => {
@@ -75,11 +89,13 @@ describe('trophies', () => {
     expect(report.trophies.map((u) => u.trophy.id)).toContain('cometCatcher');
   });
 
-  it('stay within the server limit for a run reward even when a veteran updates', () => {
+  it('keep the run ledger entry within the server limit even when a veteran updates', () => {
     const veteran = saveWith({ best: 10_000, bestPlanet: 10_000, games: 10_000 });
     const report = applyRun(veteran, result({ score: 1, planets: 1 }), { rng: seededRng(1) });
-    const extra = report.save.wallet - 0;
-    expect(extra).toBeLessThanOrEqual(2000);
+    const entries = diffLedger(veteran, report.save, { source: 'run', runId: 'r' }, () => 'e');
+    const run = entries.find((e) => e.source === 'run');
+    expect(run?.amount ?? 0).toBeLessThanOrEqual(2000);
+    expect(entries.find((e) => e.source === 'trophy')?.amount).toBe(report.trophies.reduce((a, u) => a + u.reward, 0));
   });
 });
 

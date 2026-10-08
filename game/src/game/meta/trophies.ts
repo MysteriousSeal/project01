@@ -23,6 +23,8 @@ export const TROPHY_TIERS = [
   { name: 'Bronze', reward: 25, color: C.bronze },
   { name: 'Silver', reward: 75, color: C.silver },
   { name: 'Gold', reward: 200, color: C.gold },
+  { name: 'Platinum', reward: 400, color: C.platinum },
+  { name: 'Diamond', reward: 750, color: C.diamond },
 ] as const;
 
 export type TrophyIcon = 'earth-americas' | 'rocket' | 'compass' | 'gem' | 'bolt' | 'fire' | 'skull' | 'meteor' | 'coins' | 'gamepad';
@@ -34,20 +36,21 @@ export type Trophy = {
   /** Describes the goal for a given target, e.g. "Hop 100 planets". */
   goal: (target: number) => string;
   value: (save: Save) => number;
-  targets: readonly [number, number, number];
+  /** One target per tier, increasing. */
+  targets: readonly number[];
 };
 
 export const TROPHIES: readonly Trophy[] = [
-  { id: 'hopper', name: 'Planet Hopper', icon: 'earth-americas', goal: (n) => `Hop ${n} planets in total`, value: (s) => s.stats.planets, targets: [100, 1000, 10000] },
-  { id: 'highFlyer', name: 'High Flyer', icon: 'rocket', goal: (n) => `Score ${n} in one run`, value: (s) => s.best, targets: [50, 150, 400] },
-  { id: 'explorer', name: 'Explorer', icon: 'compass', goal: (n) => `Reach planet ${n}`, value: (s) => s.bestPlanet, targets: [20, 60, 100] },
-  { id: 'perfectionist', name: 'Perfectionist', icon: 'gem', goal: (n) => `Land ${n} perfects in total`, value: (s) => s.stats.perfects, targets: [50, 500, 5000] },
-  { id: 'comboKing', name: 'Combo King', icon: 'bolt', goal: (n) => `Hit a x${n} combo`, value: (s) => s.stats.bestCombo, targets: [8, 15, 30] },
-  { id: 'feverDream', name: 'Fever Dream', icon: 'fire', goal: (n) => `Trigger fever ${n} times`, value: (s) => s.stats.fevers, targets: [5, 50, 300] },
-  { id: 'bossSlayer', name: 'Boss Slayer', icon: 'skull', goal: (n) => `Clear ${n} ${n === 1 ? 'boss' : 'bosses'}`, value: (s) => s.stats.bosses, targets: [1, 10, 50] },
-  { id: 'cometCatcher', name: 'Comet Catcher', icon: 'meteor', goal: (n) => `Catch ${n} ${n === 1 ? 'comet' : 'comets'}`, value: (s) => s.stats.comets, targets: [1, 10, 50] },
-  { id: 'hoarder', name: 'Hoarder', icon: 'coins', goal: (n) => `Collect ${n} coins in runs`, value: (s) => s.stats.coins, targets: [200, 2000, 20000] },
-  { id: 'regular', name: 'Regular', icon: 'gamepad', goal: (n) => `Play ${n} games`, value: (s) => s.games, targets: [10, 100, 1000] },
+  { id: 'hopper', name: 'Planet Hopper', icon: 'earth-americas', goal: (n) => `Hop ${n} planets in total`, value: (s) => s.stats.planets, targets: [100, 1000, 10000, 25000, 50000] },
+  { id: 'highFlyer', name: 'High Flyer', icon: 'rocket', goal: (n) => `Score ${n} in one run`, value: (s) => s.best, targets: [50, 150, 400, 700, 1000] },
+  { id: 'explorer', name: 'Explorer', icon: 'compass', goal: (n) => `Reach planet ${n}`, value: (s) => s.bestPlanet, targets: [20, 60, 100, 150, 200] },
+  { id: 'perfectionist', name: 'Perfectionist', icon: 'gem', goal: (n) => `Land ${n} perfects in total`, value: (s) => s.stats.perfects, targets: [50, 500, 5000, 10000, 25000] },
+  { id: 'comboKing', name: 'Combo King', icon: 'bolt', goal: (n) => `Hit a x${n} combo`, value: (s) => s.stats.bestCombo, targets: [8, 15, 30, 50, 75] },
+  { id: 'feverDream', name: 'Fever Dream', icon: 'fire', goal: (n) => `Trigger fever ${n} times`, value: (s) => s.stats.fevers, targets: [5, 50, 300, 750, 1500] },
+  { id: 'bossSlayer', name: 'Boss Slayer', icon: 'skull', goal: (n) => `Clear ${n} ${n === 1 ? 'boss' : 'bosses'}`, value: (s) => s.stats.bosses, targets: [1, 10, 50, 150, 400] },
+  { id: 'cometCatcher', name: 'Comet Catcher', icon: 'meteor', goal: (n) => `Catch ${n} ${n === 1 ? 'comet' : 'comets'}`, value: (s) => s.stats.comets, targets: [1, 10, 50, 150, 400] },
+  { id: 'hoarder', name: 'Hoarder', icon: 'coins', goal: (n) => `Collect ${n} coins in runs`, value: (s) => s.stats.coins, targets: [200, 2000, 20000, 50000, 100000] },
+  { id: 'regular', name: 'Regular', icon: 'gamepad', goal: (n) => `Play ${n} games`, value: (s) => s.games, targets: [10, 100, 1000, 2500, 5000] },
 ];
 
 export const MAX_TROPHY_TIER = TROPHY_TIERS.length;
@@ -78,7 +81,7 @@ export function awardTrophies(save: Save): { save: Save; unlocked: TrophyUnlock[
   return { save: { ...save, trophies, wallet: save.wallet + coins }, unlocked, coins };
 }
 
-/** Progress toward the next tier, or the gold target once it is complete. */
+/** Progress toward the next tier, or the last target once it is complete. */
 export function trophyProgress(t: Trophy, save: Save) {
   const tier = tierOf(save, t.id);
   const target = t.targets[Math.min(tier, MAX_TROPHY_TIER - 1)];
