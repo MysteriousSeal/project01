@@ -24,6 +24,20 @@ export const TUTORIAL_GAMES = 3;
 
 const showHint = (save: Save) => save.games < TUTORIAL_GAMES;
 
+/**
+ * A normal run for dev autoplay: the player's upgrades, but no boosts, ghost or hints. It never
+ * changes the save; the caller also throws its result away.
+ */
+export const autoplayConfig = (save: Save): RunConfig => ({
+  mode: 'normal',
+  mods: modsFrom(save.upgrades),
+  rules: DEFAULT_RULES,
+  ghost: [],
+  bestIdx: save.bestPlanet,
+  headStart: 0,
+  showHint: false,
+});
+
 export function startRun(save: Save, mode: RunMode, type = '', now: Date = new Date()): { save: Save; config: RunConfig } | null {
   if (mode === 'normal') {
     const boosted = consumeBoosts(save, modsFrom(save.upgrades));

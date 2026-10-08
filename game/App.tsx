@@ -6,7 +6,7 @@ import { currentChallenges, isOpen, resetAttempts } from './src/game/meta/challe
 import { skinById, themeById, trailById } from './src/game/meta/cosmetics';
 import { claimDaily, dailyStatus } from './src/game/meta/dailyReward';
 import { applyRun, RunReport } from './src/game/meta/progress';
-import { retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
+import { autoplayConfig, retryMode, RunConfig, RunMode, startRun } from './src/game/meta/session';
 import { reviveOffer } from './src/game/meta/revive';
 import { claimSeason, SEASON, seasonStatus } from './src/game/meta/season';
 import type { GameEvent, RunResult } from './src/game/sim/engine';
@@ -35,8 +35,11 @@ import { C } from './src/ui/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-/** `runId` is the server id shared by the run row and any revive paid during it. */
-type Run = { id: number; runId: string; config: RunConfig };
+/**
+ * `runId` is the server id shared by the run row and any revive paid during it. `bot` runs are
+ * dev autoplay: nothing about them is saved, logged or ranked.
+ */
+type Run = { id: number; runId: string; config: RunConfig; bot?: boolean };
 type Outcome = { result: RunResult; report: RunReport };
 /** Pages opened from Home on top of the tabs. */
 type Overlay = 'settings' | 'season' | null;
@@ -94,6 +97,11 @@ export default function App() {
     setRun((r) => ({ id: (r?.id ?? 0) + 1, runId: uuid(), config: started.config }));
   };
 
+  const startBot = () => {
+    setOutcome(null);
+    setRun((r) => ({ id: (r?.id ?? 0) + 1, runId: '', config: autoplayConfig(save), bot: true }));
+  };
+
   const retry = () => {
     if (!run) return;
     const next = retryMode(save, run.config);
@@ -102,6 +110,7 @@ export default function App() {
 
   const finishRun = (result: RunResult) => {
     if (!run) return;
+    if (run.bot) return startBot();
     const report = applyRun(save, result, { mode: run.config.mode, challenge: run.config.challenge?.id });
     const { runId } = run;
     void telemetry?.logRun(runRow(runId, run.config, result, save.challenges.day || null));
@@ -142,7 +151,7 @@ export default function App() {
     <View style={styles.root}>
       <StatusBar style="light" />
       {run && !outcome && (
-        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} theme={themeById(save.theme)} config={run.config} onEvent={onGameEvent} onEnd={finishRun} reviveOffer={offerRevive} onRevive={payRevive} wallet={save.wallet} />
+        <GameScreen key={run.id} W={width} H={height} skin={skinById(save.skin)} trailStyle={trailById(save.trail).id} theme={themeById(save.theme)} config={run.config} onEvent={onGameEvent} onEnd={finishRun} reviveOffer={offerRevive} onRevive={payRevive} wallet={save.wallet} autoplay={run.bot} onStop={() => setRun(null)} />
       )}
       {!run && (
         <>
@@ -162,6 +171,7 @@ export default function App() {
                 account={accountApi && <AccountSection api={accountApi} beforeAuth={async () => void (await telemetry?.flush())} onSwitched={() => switchAccount(chooseProgress)} />}
                 onAddCoins={__DEV__ ? (amount) => update({ ...save, wallet: save.wallet + amount }, { source: 'dev' }) : undefined}
                 onResetAttempts={__DEV__ ? () => update({ ...save, challenges: resetAttempts(save.challenges) }) : undefined}
+                onAutoplay={__DEV__ ? startBot : undefined}
               />
             )}
           </View>

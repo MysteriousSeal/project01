@@ -81,6 +81,9 @@ export type Comet = { x: number; y: number; vx: number; taken: boolean };
 export type PowerKind = 'shield' | 'magnet';
 export type PowerUp = { x: number; y: number; kind: PowerKind; taken: boolean };
 
+/** Where a planet is at run time `t` (moving planets sway around their base x). */
+export const planetX = (p: Planet, t: number) => (p.moveAmp ? p.baseX + Math.sin(t * 1.3 + p.movePhase) * p.moveAmp : p.x);
+
 export const isBossIndex = (idx: number, every: number = WORLD.bossEvery) => idx > 0 && idx % every === 0;
 
 const angleDiff = (a: number, b: number) => {

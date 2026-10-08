@@ -7,11 +7,11 @@ import { SettingRow } from '../components/SettingRow';
 import { Toggle } from '../components/Toggle';
 import { C, CARD, FIELD } from '../theme';
 
-type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; account?: ReactNode; onBack: () => void };
+type Props = { save: Save; onChange: (settings: Settings) => void; onRename: (name: string) => void; onAddCoins?: (amount: number) => void; onResetAttempts?: () => void; onAutoplay?: () => void; account?: ReactNode; onBack: () => void };
 
 export const DEV_COINS = 100;
 
-export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAttempts, account, onBack }: Props) {
+export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAttempts, onAutoplay, account, onBack }: Props) {
   const { settings } = save;
   const [draft, setDraft] = useState(save.name);
   const [invalid, setInvalid] = useState(false);
@@ -74,7 +74,7 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
         </SettingRow>
       </View>
 
-      {__DEV__ && (onAddCoins || onResetAttempts) && <SectionLabel>DEVELOPER · DEV BUILDS ONLY</SectionLabel>}
+      {__DEV__ && (onAddCoins || onResetAttempts || onAutoplay) && <SectionLabel>DEVELOPER · DEV BUILDS ONLY</SectionLabel>}
       {__DEV__ && onAddCoins && (
         <View style={styles.card}>
           <SettingRow icon="coins" color={C.gold} label="Add coins" desc="Testing cheat. Hidden in release builds.">
@@ -86,6 +86,13 @@ export function SettingsScreen({ save, onChange, onRename, onAddCoins, onResetAt
         <View style={styles.card}>
           <SettingRow icon="rotate-right" color={C.gold} label="Reset daily attempts" desc="Gives back all attempts for today's challenges. Best scores and medals stay.">
             <Button label="Reset" variant="gold" onPress={onResetAttempts} accessibilityLabel="Reset daily challenge attempts" style={styles.btn} />
+          </SettingRow>
+        </View>
+      )}
+      {__DEV__ && onAutoplay && (
+        <View style={styles.card}>
+          <SettingRow icon="robot" color={C.gold} label="AI autoplay" desc="Watch a bot play normal runs until you tap Stop. Nothing is saved, ranked or sent.">
+            <Button label="Start" variant="gold" onPress={onAutoplay} accessibilityLabel="Start AI autoplay" style={styles.btn} />
           </SettingRow>
         </View>
       )}

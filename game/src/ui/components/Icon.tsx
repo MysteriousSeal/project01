@@ -35,7 +35,8 @@ export type IconName =
   | 'ranking-star'
   | 'chevron-left'
   | 'volume-high'
-  | 'star';
+  | 'star'
+  | 'robot';
 
 type Props = { name: IconName; size?: number; color?: string; style?: StyleProp<TextStyle> };
 

@@ -4,7 +4,7 @@ import { MAX_TRACK, Track, TRACK_END } from './ghost';
 import { retain } from './retain';
 import { type Rng } from './rng';
 import { TUNING } from './tuning';
-import { Coin, Comet, cometFor, DEFAULT_MODS, DEFAULT_RULES, inGap, makePlanet, Mods, pickupFor, Planet, PowerKind, PowerUp, Rules, zoneIndex, ZONES } from './world';
+import { Coin, Comet, cometFor, DEFAULT_MODS, DEFAULT_RULES, inGap, makePlanet, Mods, pickupFor, Planet, planetX, PowerKind, PowerUp, Rules, zoneIndex, ZONES } from './world';
 
 export type { Particle, Popup } from './effects';
 export { retain } from './retain';
@@ -420,7 +420,7 @@ export function step(s: State, realDt: number) {
   s.slowmo = Math.max(0, s.slowmo - realDt);
   s.t += dt;
   for (const p of s.planets) {
-    if (p.moveAmp) p.x = p.baseX + Math.sin(s.t * 1.3 + p.movePhase) * p.moveAmp;
+    if (p.moveAmp) p.x = planetX(p, s.t);
     if (p.ring) p.gapAngle += p.gapSpin * dt;
   }
   for (const c of s.comets) c.x += c.vx * dt;

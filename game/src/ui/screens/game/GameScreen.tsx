@@ -11,6 +11,8 @@ import { Starfield } from '../../components/Starfield';
 import { TrailDot, trailLength } from '../../components/TrailDot';
 import { alpha, C } from '../../theme';
 import { Hud } from './Hud';
+import { botWantsTap } from '../../../game/sim/bot';
+import { Button } from '../../components/Button';
 import { PlanetView } from './PlanetView';
 import { EndFlow } from './endFlow';
 import { ReviveOverlay } from './ReviveOverlay';
@@ -29,6 +31,9 @@ type Props = {
   /** Pays for a revive; returns false when it could not be paid. */
   onRevive?: (used: number) => boolean;
   wallet?: number;
+  /** Dev autoplay: the bot taps, player taps are ignored, and a STOP button ends it. */
+  autoplay?: boolean;
+  onStop?: () => void;
 };
 
 
@@ -36,7 +41,7 @@ type Props = {
 const COMET_SEED = 7919;
 const MAX_DT = 1 / 30;
 
-function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'], reviveOffer: Props['reviveOffer']) {
+function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'], reviveOffer: Props['reviveOffer'], autoplay: boolean) {
   const [, setFrame] = useState(0);
   const [offer, setOffer] = useState<number | null>(null);
   const [flow] = useState(() => new EndFlow());
@@ -50,6 +55,7 @@ function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'],
     const loop = (now: number) => {
       const dt = last ? Math.min((now - last) / 1000, MAX_DT) : 0;
       last = now;
+      if (autoplay && botWantsTap(s)) tap(s);
       step(s, dt);
       for (const e of s.events) emit(e);
       s.events.length = 0;
@@ -61,7 +67,7 @@ function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'],
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [s, flow]);
+  }, [s, flow, autoplay]);
 
   const resume = () => {
     flow.resume();
@@ -74,7 +80,7 @@ function useGameLoop(s: State, onEvent: Props['onEvent'], onEnd: Props['onEnd'],
   return { offer, resume, decline };
 }
 
-export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onEnd, reviveOffer, onRevive, wallet = 0 }: Props) {
+export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onEnd, reviveOffer, onRevive, wallet = 0, autoplay = false, onStop }: Props) {
   const [g] = useState(() => {
     const seeded = config.seed !== undefined;
     return createState(W, H, {
@@ -83,7 +89,7 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
       cometRng: seeded ? seededRng(config.seed! + COMET_SEED) : Math.random,
     });
   });
-  const { offer, resume, decline } = useGameLoop(g, onEvent, onEnd, reviveOffer);
+  const { offer, resume, decline } = useGameLoop(g, onEvent, onEnd, autoplay ? undefined : reviveOffer, autoplay);
   const accept = () => {
     if (!onRevive?.(g.revives)) return decline();
     revive(g);
@@ -102,7 +108,7 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
   const ghostPlanet = alive && ghostActive(g) ? g.planets.find((p) => p.idx === g.ghostIdx) : undefined;
 
   return (
-    <Pressable style={StyleSheet.absoluteFill} onPressIn={() => tap(g)} accessibilityLabel="Game area. Tap to launch.">
+    <Pressable style={StyleSheet.absoluteFill} onPressIn={autoplay ? undefined : () => tap(g)} accessibilityLabel={autoplay ? 'AI is playing' : 'Game area. Tap to launch.'}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: zoneOf(g.cur).bg }]}>
         {fever && <View style={[StyleSheet.absoluteFill, { backgroundColor: C.pink, opacity: 0.08 + 0.05 * Math.sin(g.t * 12) }]} />}
         {g.slowmo > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: C.gold, opacity: 0.1 * (g.slowmo / TUNING.slowmoTime) }]} />}
@@ -158,6 +164,13 @@ export function GameScreen({ W, H, skin, trailStyle, theme, config, onEvent, onE
 
       <Hud g={g} challenge={config.challenge} />
 
+      {autoplay && (
+        <View style={styles.bot} pointerEvents="box-none">
+          <Text style={styles.botTag}>AI PLAYING · NOT RECORDED</Text>
+          <Button label="STOP AI" variant="secondary" onPress={onStop} style={styles.botStop} />
+        </View>
+      )}
+
       {offer !== null && <ReviveOverlay price={offer} score={g.score} wallet={wallet} onRevive={accept} onDecline={decline} />}
 
       {config.showHint && g.score === 0 && alive && (
@@ -187,6 +200,9 @@ function CometView({ c, top, t }: { c: Comet; top: number; t: number }) {
 }
 
 const styles = StyleSheet.create({
+  bot: { position: 'absolute', left: 0, right: 0, bottom: 40, alignItems: 'center', gap: 8 },
+  botTag: { color: C.pink, fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
+  botStop: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: 30 },
   comet: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: C.text, borderWidth: 3, borderColor: C.sky, shadowColor: C.sky, shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
   abs: { position: 'absolute' },
   aim: { position: 'absolute', width: 5, height: 5, borderRadius: 3 },
