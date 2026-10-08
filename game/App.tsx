@@ -111,7 +111,13 @@ export default function App() {
             {tab === 'home' && <HomeScreen save={save} onPlay={() => play('normal')} onShop={() => goTab('shop')} />}
             {tab === 'daily' && <DailyScreen save={save} onPlay={(type) => play('daily', type)} onClaim={claim} />}
             {tab === 'shop' && <ShopScreen save={save} onChange={setSave} />}
-            {tab === 'settings' && <SettingsScreen save={save} onChange={(settings) => setSave({ ...save, settings })} />}
+            {tab === 'settings' && (
+              <SettingsScreen
+                save={save}
+                onChange={(settings) => setSave({ ...save, settings })}
+                onAddCoins={__DEV__ ? (amount) => setSave({ ...save, wallet: save.wallet + amount }) : undefined}
+              />
+            )}
           </View>
           <TabBar tab={tab} onChange={setTab} badges={{ daily: dailyBadge }} />
         </>
