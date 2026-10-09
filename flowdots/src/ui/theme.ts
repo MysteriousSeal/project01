@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
-// Visual identity: a transit/subway map. The game IS "connect colored lines between stations" —
-// so the chrome borrows directly from metro-map signage: a cool paper-grey canvas, bold flat
-// line colors (no gradients — real transit lines are flat ink), and condensed signage type.
+// Visual identity: a transit/subway map. The game IS "connect colored lines between stations",
+// so the chrome borrows from metro-map signage: a cool paper-grey canvas, flat saturated line
+// colors (real transit lines are flat ink), and condensed signage type.
 export const C = {
   canvas: '#EDEFF3',
   surface: '#FFFFFF',
@@ -12,11 +12,13 @@ export const C = {
   accent: '#1F6FEB',
   success: '#2DBE6C',
   locked: '#C7CCD6',
+  star: '#F2C94C',
+  scrim: 'rgba(28,32,36,0.45)',
 };
 
-// Metro-line colors — one fixed, saturated hue per color slot. Flat, not gradient: real transit
-// lines are printed ink, which is also exactly what the pipe segments should look like.
-export const dotColors = [
+// One fixed hue per color slot (game/levels MAX_COLORS of them). Hand-picked rather than an
+// evenly spread hue wheel: adjacent lines must stay distinguishable at a glance.
+export const LINE_COLORS = [
   '#E8463D', // red
   '#F2994A', // orange
   '#F2C94C', // amber
@@ -25,13 +27,15 @@ export const dotColors = [
   '#2F6FE0', // blue
   '#8450D6', // violet
   '#E0469B', // magenta
-];
+] as const;
 
-export const alpha = (hex: string, a: number) =>
-  `${hex.slice(0, 7)}${Math.round(Math.max(0, Math.min(1, a)) * 255).toString(16).padStart(2, '0')}`;
+// Each world is drawn as its own metro line, so it borrows a line color.
+export function worldColor(worldIndex: number): string {
+  return LINE_COLORS[worldIndex % LINE_COLORS.length];
+}
 
 export const F = {
-  // Condensed + heavy reads as signage/departure-board, not as a generic app title.
+  // Condensed + heavy reads as station signage rather than a generic app title.
   display: Platform.select({ ios: 'HelveticaNeue-CondensedBold', android: 'sans-serif-condensed', default: undefined }),
   displayWeight: Platform.select<'900' | 'bold'>({ ios: '900', android: 'bold', default: '900' }),
   mono: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
@@ -40,6 +44,9 @@ export const F = {
 export const GUTTER = 16;
 export const GAP = 10;
 export const RADIUS = { sm: 10, md: 14, lg: 18, xl: 24, pill: 999 };
+
+// The one press response used by every tappable surface, so the whole app feels the same.
+export const PRESSED = { transform: [{ scale: 0.95 }], opacity: 0.9 };
 
 export function softShadow(opacity = 0.12, radius = 10, y = 4) {
   return {

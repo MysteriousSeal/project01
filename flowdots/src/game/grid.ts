@@ -1,24 +1,18 @@
 export type Pos = { row: number; col: number };
 
-export function posKey(p: Pos): string {
-  return `${p.row},${p.col}`;
-}
-
 export function posEqual(a: Pos, b: Pos): boolean {
   return a.row === b.row && a.col === b.col;
 }
 
 export function isAdjacent(a: Pos, b: Pos): boolean {
-  const dr = Math.abs(a.row - b.row);
-  const dc = Math.abs(a.col - b.col);
-  return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
+  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
 }
 
 export function inBounds(p: Pos, size: number): boolean {
   return p.row >= 0 && p.row < size && p.col >= 0 && p.col < size;
 }
 
-export const NEIGHBOR_OFFSETS: Pos[] = [
+const NEIGHBOR_OFFSETS: readonly Pos[] = [
   { row: -1, col: 0 },
   { row: 1, col: 0 },
   { row: 0, col: -1 },
@@ -26,7 +20,26 @@ export const NEIGHBOR_OFFSETS: Pos[] = [
 ];
 
 export function neighbors(p: Pos, size: number): Pos[] {
-  return NEIGHBOR_OFFSETS.map((o) => ({ row: p.row + o.row, col: p.col + o.col })).filter((n) =>
-    inBounds(n, size),
-  );
+  const out: Pos[] = [];
+  for (const o of NEIGHBOR_OFFSETS) {
+    const n = { row: p.row + o.row, col: p.col + o.col };
+    if (inBounds(n, size)) out.push(n);
+  }
+  return out;
+}
+
+// Orthogonal unit steps from `from` (exclusive) to `to` (inclusive), always stepping along the
+// axis with more distance left so the route hugs the straight line between them. A fast swipe
+// can jump several cells between two touch events; replaying these steps keeps the line intact.
+export function cellsBetween(from: Pos, to: Pos): Pos[] {
+  const steps: Pos[] = [];
+  let { row, col } = from;
+  while (row !== to.row || col !== to.col) {
+    const dr = to.row - row;
+    const dc = to.col - col;
+    if (Math.abs(dr) >= Math.abs(dc)) row += Math.sign(dr);
+    else col += Math.sign(dc);
+    steps.push({ row, col });
+  }
+  return steps;
 }

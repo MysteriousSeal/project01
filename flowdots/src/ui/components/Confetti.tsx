@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { dotColors } from '../../game/theme';
+import { LINE_COLORS } from '../theme';
 
 type Particle = { dx: number; dy: number; rotate: number; color: string; size: number };
 
@@ -13,7 +13,7 @@ function createParticles(count: number): Particle[] {
       dx: Math.cos(angle) * distance,
       dy: Math.sin(angle) * distance - 40,
       rotate: (Math.random() - 0.5) * 540,
-      color: dotColors[Math.floor(Math.random() * dotColors.length)],
+      color: LINE_COLORS[Math.floor(Math.random() * LINE_COLORS.length)],
       size: 6 + Math.random() * 6,
     };
   });

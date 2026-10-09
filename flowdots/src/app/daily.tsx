@@ -1,47 +1,43 @@
-import { Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { dailyLevel } from '../game/levels';
+import { recordDailyComplete } from '../storage/progress';
 import { Button } from '../ui/components/Button';
-import { PuzzleBoard } from '../ui/components/PuzzleBoard';
-import { generateDaily, generateDailySolution } from '../game/generate';
-import { recordDailyComplete } from '../game/save';
-import { C, F } from '../game/theme';
+import { useGoBack } from '../ui/hooks/useGoBack';
+import { PuzzleBoard } from '../ui/puzzle/PuzzleBoard';
+import { C, F } from '../ui/theme';
+import { today } from '../ui/time';
 
 export default function DailyScreen() {
-  const router = useRouter();
-  const def = useMemo(() => generateDaily(), []);
-  const solution = useMemo(() => generateDailySolution(), []);
+  const goBack = useGoBack();
+  // Pinned at open: the puzzle and the streak day must agree even if play crosses midnight.
+  const [date] = useState(today);
+  const level = useMemo(() => dailyLevel(date), [date]);
   const [streak, setStreak] = useState<number | null>(null);
 
   return (
-    <>
-      <Stack.Screen options={{ gestureEnabled: false }} />
-      <PuzzleBoard
-        def={def}
-        solution={solution}
-        title="DAILY CHALLENGE"
-        onBack={() => router.back()}
-        onSolved={() => {
-          recordDailyComplete().then(({ streak: s }) => setStreak(s));
-        }}
-        solvedActions={() => (
-          <View style={{ alignItems: 'center', gap: 12 }}>
-            {streak !== null && (
-              <View style={styles.streakRow}>
-                <Text style={styles.streakFlame}>🔥</Text>
-                <Text style={styles.streakText}>{streak}-DAY STREAK</Text>
-              </View>
-            )}
-            <Button label="DONE" size="lg" onPress={() => router.replace('/')} />
-          </View>
-        )}
-      />
-    </>
+    <PuzzleBoard
+      level={level}
+      title="DAILY CHALLENGE"
+      onBack={goBack}
+      onSolved={() => recordDailyComplete(date).then((r) => setStreak(r.streak))}
+      solvedActions={() => (
+        <>
+          {streak !== null && (
+            <View style={styles.streak}>
+              <Text style={styles.flame}>🔥</Text>
+              <Text style={styles.streakText}>{streak}-DAY STREAK</Text>
+            </View>
+          )}
+          <Button label="DONE" size="lg" onPress={goBack} />
+        </>
+      )}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  streakFlame: { fontSize: 18 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  flame: { fontSize: 18 },
   streakText: { fontFamily: F.mono, fontSize: 14, fontWeight: '800', color: C.ink },
 });
